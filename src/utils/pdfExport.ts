@@ -301,9 +301,26 @@ export async function exportVisitPDF(patient: Patient, visit: Visit, clinicName 
       setTextColor(doc, COLORS.medium);
       doc.text('Clinical Images:', MARGIN, y + 4);
 
-      lesion.photos.forEach((_, pi) => {
-        if (pi < 5) {
-          drawLesionPhotoBox(doc, MARGIN + 25 + pi * (photoW + 3), y, photoW, photoH, lesion, pi);
+      lesion.photos.forEach((photo, pi) => {
+        if (pi >= 5) return;
+        const px = MARGIN + 25 + pi * (photoW + 3);
+        if (photo.url && photo.url.startsWith('data:image')) {
+          // Embed the actual captured image
+          try {
+            const fmt = photo.url.startsWith('data:image/png') ? 'PNG' : 'JPEG';
+            doc.addImage(photo.url, fmt, px, y, photoW, photoH);
+            // Caption bar
+            setFill(doc, [0, 0, 0]);
+            doc.rect(px, y + photoH - 5, photoW, 5, 'F');
+            doc.setTextColor(200, 200, 200);
+            doc.setFontSize(5);
+            const label = photo.capture_type === 'dermoscopic' ? 'DERM.' : 'CLIN.';
+            doc.text(label, px + photoW / 2, y + photoH - 1.5, { align: 'center' });
+          } catch {
+            drawLesionPhotoBox(doc, px, y, photoW, photoH, lesion, pi);
+          }
+        } else {
+          drawLesionPhotoBox(doc, px, y, photoW, photoH, lesion, pi);
         }
       });
 
@@ -376,8 +393,10 @@ export async function exportVisitPDF(patient: Patient, visit: Visit, clinicName 
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(7.5);
   setTextColor(doc, COLORS.medium);
-  const attestText = 'I attest that I have reviewed this documentation and it accurately reflects the patient encounter on the date specified.';
-  doc.text(doc.splitTextToSize(attestText, CONTENT_W - 10), MARGIN + 5, y + 13);
+  const defaultAttest = 'I attest that I have reviewed this documentation and it accurately reflects the patient encounter on the date specified.';
+  const attestText = visit.provider_attestation || defaultAttest;
+  const attestLines = doc.splitTextToSize(attestText, CONTENT_W - 10);
+  doc.text(attestLines.slice(0, 3), MARGIN + 5, y + 13);
 
   // Signature line
   setDrawColor(doc, COLORS.dark);

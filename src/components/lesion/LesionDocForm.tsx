@@ -1,7 +1,13 @@
 import { useState } from 'react';
-import { X, Camera, CheckCircle, ChevronRight, Ruler, Clock, Check, ArrowLeft } from 'lucide-react';
-import { Lesion, LesionAction, LesionColor, LesionShape, LesionBorder, LesionSymmetry, BiopsyResult } from '../../types';
+import { X, Camera, CheckCircle, ChevronRight, Ruler, Clock, Check, ArrowLeft, Mic, FileText, AlertTriangle, DollarSign, Tag, TrendingUp, Edit } from 'lucide-react';
+import { Lesion, LesionAction, LesionColor, LesionShape, LesionBorder, LesionSymmetry, BiopsyResult, DermoscopyAnnotation } from '../../types';
 import { useAppStore } from '../../store/appStore';
+import { VoiceInput } from '../ui/VoiceInput';
+import { CameraCapture } from './CameraCapture';
+import { CPTCodeTracker } from '../billing/CPTCodeTracker';
+import { DermoscopyAnnotations } from './DermoscopyAnnotations';
+import { CLINICAL_TEMPLATES, getTemplatesByCategory, searchTemplates } from '../../data/clinicalTemplates';
+import { calculateRiskScore, riskColor, riskLabel, detectChanges } from '../../utils/riskScoring';
 import clsx from 'clsx';
 
 interface LesionDocFormProps {
@@ -10,6 +16,8 @@ interface LesionDocFormProps {
   visitId: string;
   onClose: () => void;
   onSave: (lesion: Lesion) => void;
+  priorLesion?: Lesion;  // For re-documentation workflow (creates NEW lesion with comparison)
+  existingLesion?: Lesion;  // For editing existing lesion in current visit
 }
 
 const sizeOptions = [1, 2, 3, 4, 5, 6];
@@ -40,29 +48,63 @@ const actionOptions: { value: LesionAction; label: string; color: string }[] = [
   { value: 'no_action',         label: 'No Action',         color: 'bg-slate-50 text-slate-600 border-slate-300' },
 ];
 
-const TOTAL_STEPS = 4;
+const TOTAL_STEPS = 5;
 
-export function LesionDocForm({ pendingCoords, region, visitId, onClose, onSave }: LesionDocFormProps) {
+export function LesionDocForm({ pendingCoords, region, visitId, onClose, onSave, priorLesion, existingLesion }: LesionDocFormProps) {
   const { currentUser, getDocTime } = useAppStore();
   const isProvider = currentUser?.role === 'provider';
 
+  // Use existingLesion for editing, priorLesion for re-documentation
+  const sourceLesion = existingLesion || priorLesion;
+
   const [step, setStep] = useState(1);
-  const [size, setSize] = useState<number | null>(null);
+  const [size, setSize] = useState<number | null>(sourceLesion?.size_mm || null);
   const [sizeCustom, setSizeCustom] = useState('');
-  const [shape, setShape] = useState<LesionShape | null>(null);
-  const [color, setColor] = useState<LesionColor | null>(null);
-  const [border, setBorder] = useState<LesionBorder>('not_assessed');
-  const [symmetry, setSymmetry] = useState<LesionSymmetry>('not_assessed');
-  const [action, setAction] = useState<LesionAction>('monitor');
-  const [notes, setNotes] = useState('');
-  const [photos, setPhotos] = useState<string[]>([]);
+  const [shape, setShape] = useState<LesionShape | null>(sourceLesion?.shape || null);
+  const [color, setColor] = useState<LesionColor | null>(sourceLesion?.color || null);
+  const [border, setBorder] = useState<LesionBorder>(sourceLesion?.border || 'not_assessed');
+  const [symmetry, setSymmetry] = useState<LesionSymmetry>(sourceLesion?.symmetry || 'not_assessed');
+  const [action, setAction] = useState<LesionAction>(sourceLesion?.action || 'monitor');
+  const [notes, setNotes] = useState(
+    existingLesion ? existingLesion.clinical_notes :
+    priorLesion ? `Follow-up of previous lesion.\n${priorLesion.clinical_notes || ''}` : ''
+  );
+  const [photos, setPhotos] = useState<string[]>(existingLesion?.photos.map(p => p.photo_id) || []);
   const [saved, setSaved] = useState(false);
+  const [showCamera, setShowCamera] = useState(false);
+  const [showTemplates, setShowTemplates] = useState(false);
+  const [templateSearch, setTemplateSearch] = useState('');
+  const [cptCodes, setCptCodes] = useState<string[]>(sourceLesion?.cpt_codes || []);
+  const [dermAnnotations, setDermAnnotations] = useState<DermoscopyAnnotation[]>([]);
 
   const regionLabel = region.replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase());
 
   const handleAddPhoto = () => {
     setPhotos((prev) => [...prev, `photo-${Date.now()}`]);
   };
+
+  const handleCameraCapture = (photo: { url: string; type: 'clinical' | 'dermoscopic' }) => {
+    setPhotos((prev) => [...prev, `cam-${Date.now()}`]);
+    setShowCamera(false);
+  };
+
+  const handleDeletePhoto = (index: number) => {
+    setPhotos((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const handleApplyTemplate = (text: string) => {
+    setNotes((prev) => (prev ? prev + '\n' : '') + text);
+    setShowTemplates(false);
+  };
+
+  // Calculate risk score preview
+  const riskPreview = calculateRiskScore({
+    symmetry,
+    border,
+    color,
+    size_mm: size ?? (sizeCustom ? parseFloat(sizeCustom) : null),
+    dermoscopy_features: dermAnnotations.map(a => a.feature),
+  } as any);
 
   const handleSave = () => {
     const lesion: Lesion = {
@@ -88,9 +130,19 @@ export function LesionDocForm({ pendingCoords, region, visitId, onClose, onSave 
         capture_type: i % 2 === 0 ? 'clinical' : 'dermoscopic',
         captured_at: new Date().toISOString(),
         captured_by: currentUser?.name || 'Unknown',
+        annotations: i % 2 === 1 ? dermAnnotations : undefined,
       })),
       isNew: true,
+      risk_score: riskPreview,
+      cpt_codes: cptCodes.length > 0 ? cptCodes : undefined,
+      dermoscopy_features: dermAnnotations.length > 0 ? [...new Set(dermAnnotations.map(a => a.feature))] : undefined,
     };
+    
+    // If this is a re-documentation, calculate and attach change tracking
+    if (priorLesion) {
+      lesion.change_from_prior = detectChanges(lesion, priorLesion, visitId, priorLesion.created_at);
+    }
+    
     setSaved(true);
     setTimeout(() => { onSave(lesion); }, 800);
   };
@@ -127,29 +179,54 @@ export function LesionDocForm({ pendingCoords, region, visitId, onClose, onSave 
             {photos.length > 0 && (
               <div className="flex gap-2 flex-wrap">
                 {photos.map((_, i) => (
-                  <div key={i} className="w-16 h-16 rounded-xl overflow-hidden border border-slate-200 relative shrink-0">
+                  <div key={i} className="w-16 h-16 rounded-xl overflow-hidden border border-slate-200 relative shrink-0 group">
                     <div className="w-full h-full bg-gradient-to-br from-slate-700 to-slate-900 flex items-center justify-center">
                       <span className="text-xs text-white font-medium">#{i + 1}</span>
                     </div>
                     <div className="absolute bottom-0 inset-x-0 bg-black/50 text-white text-[9px] text-center py-0.5">
                       {i % 2 === 0 ? 'Clinical' : 'Derm.'}
                     </div>
+                    {/* Delete button */}
+                    <button
+                      onClick={() => handleDeletePhoto(i)}
+                      className="absolute top-0.5 right-0.5 w-5 h-5 bg-red-600 hover:bg-red-700 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                      type="button"
+                    >
+                      <X size={12} />
+                    </button>
                   </div>
                 ))}
               </div>
             )}
 
-            {/* Big capture button */}
-            <button
-              onClick={handleAddPhoto}
-              className="w-full flex flex-col items-center justify-center gap-3 h-32 rounded-2xl border-2 border-dashed border-teal-300 bg-teal-50 text-teal-600 hover:border-teal-500 hover:bg-teal-100 active:bg-teal-200 transition-colors"
-            >
-              <Camera size={32} />
-              <span className="text-sm font-semibold">Tap to Capture Photo</span>
-            </button>
+            {/* Camera + upload buttons */}
+            <div className="grid grid-cols-2 gap-3">
+              <button
+                onClick={() => setShowCamera(true)}
+                className="flex flex-col items-center justify-center gap-2 h-28 rounded-2xl border-2 border-dashed border-teal-300 bg-teal-50 text-teal-600 hover:border-teal-500 hover:bg-teal-100 active:bg-teal-200 transition-colors"
+              >
+                <Camera size={28} />
+                <span className="text-xs font-semibold">Open Camera</span>
+              </button>
+              <button
+                onClick={handleAddPhoto}
+                className="flex flex-col items-center justify-center gap-2 h-28 rounded-2xl border-2 border-dashed border-slate-300 bg-slate-50 text-slate-500 hover:border-slate-400 hover:bg-slate-100 transition-colors"
+              >
+                <Camera size={28} />
+                <span className="text-xs font-semibold">Upload File</span>
+              </button>
+            </div>
 
             {photos.length > 0 && (
               <p className="text-xs text-center text-slate-400">{photos.length} photo{photos.length !== 1 ? 's' : ''} captured</p>
+            )}
+
+            {/* Camera overlay */}
+            {showCamera && (
+              <CameraCapture
+                onCapture={handleCameraCapture}
+                onClose={() => setShowCamera(false)}
+              />
             )}
           </div>
         );
@@ -159,7 +236,15 @@ export function LesionDocForm({ pendingCoords, region, visitId, onClose, onSave 
           <div className="p-5 space-y-5">
             {/* Size */}
             <div>
-              <h3 className="text-base font-semibold text-slate-900 mb-3">Size (mm)</h3>
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="text-base font-semibold text-slate-900">Size (mm)</h3>
+                {priorLesion?.size_mm && (
+                  <span className="text-xs text-slate-500 flex items-center gap-1">
+                    <TrendingUp size={12} />
+                    Was {priorLesion.size_mm}mm
+                  </span>
+                )}
+              </div>
               <div className="grid grid-cols-3 gap-2 mb-3">
                 {sizeOptions.map((s) => (
                   <button
@@ -191,7 +276,14 @@ export function LesionDocForm({ pendingCoords, region, visitId, onClose, onSave 
 
             {/* Shape */}
             <div className="border-t border-slate-100 pt-4">
-              <h3 className="text-base font-semibold text-slate-900 mb-3">Shape</h3>
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="text-base font-semibold text-slate-900">Shape</h3>
+                {priorLesion?.shape && (
+                  <span className="text-xs text-slate-500 flex items-center gap-1">
+                    Was {priorLesion.shape}
+                  </span>
+                )}
+              </div>
               <div className="grid grid-cols-2 gap-2">
                 {shapeOptions.map((opt) => (
                   <button
@@ -216,7 +308,14 @@ export function LesionDocForm({ pendingCoords, region, visitId, onClose, onSave 
       case 3:
         return (
           <div className="p-5">
-            <h3 className="text-base font-semibold text-slate-900 mb-3">Color</h3>
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-base font-semibold text-slate-900">Color</h3>
+              {priorLesion?.color && (
+                <span className="text-xs text-slate-500 flex items-center gap-1">
+                  Was {priorLesion.color.replace(/_/g, ' ')}
+                </span>
+              )}
+            </div>
             <div className="grid grid-cols-2 gap-2">
               {colorOptions.map((opt) => (
                 <button
@@ -315,26 +414,134 @@ export function LesionDocForm({ pendingCoords, region, visitId, onClose, onSave 
               </div>
             </div>
 
-            {/* Notes — provider only */}
-            {isProvider && (
-              <div className="border-t border-slate-100 pt-4">
-                <label className="label">Clinical Notes</label>
-                <textarea
-                  className="input resize-none text-sm"
-                  rows={3}
-                  placeholder="Add clinical assessment, differential, plan..."
-                  value={notes}
-                  onChange={(e) => setNotes(e.target.value)}
-                />
+            {/* Clinical Notes with voice input and templates */}
+            <div className="border-t border-slate-100 pt-4">
+              <div className="flex items-center justify-between mb-2">
+                <label className="label mb-0">Clinical Notes</label>
+                <div className="flex gap-1.5">
+                  <button
+                    onClick={() => setShowTemplates(!showTemplates)}
+                    className={clsx(
+                      'flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-medium transition-colors',
+                      showTemplates ? 'bg-blue-100 text-blue-700' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
+                    )}
+                  >
+                    <FileText size={12} />
+                    Templates
+                  </button>
+                </div>
+              </div>
+
+              {/* Template picker */}
+              {showTemplates && (
+                <div className="mb-3 border border-blue-200 rounded-xl bg-blue-50 p-3 space-y-2">
+                  <input
+                    type="text"
+                    placeholder="Search templates..."
+                    className="w-full px-3 py-1.5 bg-white border border-blue-200 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-blue-200"
+                    value={templateSearch}
+                    onChange={(e) => setTemplateSearch(e.target.value)}
+                  />
+                  <div className="max-h-32 overflow-y-auto space-y-1">
+                    {(templateSearch ? searchTemplates(templateSearch) : CLINICAL_TEMPLATES.slice(0, 8)).map(t => (
+                      <button
+                        key={t.id}
+                        onClick={() => handleApplyTemplate(t.text)}
+                        className="w-full text-left px-2.5 py-2 bg-white rounded-lg text-xs hover:bg-blue-100 transition-colors border border-blue-100"
+                      >
+                        <div className="font-medium text-slate-700">{t.name}</div>
+                        <div className="text-slate-400 truncate mt-0.5">{t.text.slice(0, 60)}...</div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              <VoiceInput
+                onTranscript={(text) => setNotes((prev) => (prev ? prev + ' ' : '') + text)}
+                placeholder="Add clinical assessment, differential, plan..."
+                value={notes}
+              />
+            </div>
+
+            {/* Risk score preview */}
+            {riskPreview && (
+              <div className={clsx(
+                'border-t border-slate-100 pt-4'
+              )}>
+                <div className="flex items-center gap-2 mb-2">
+                  <AlertTriangle size={14} style={{ color: riskColor(riskPreview.level) }} />
+                  <span className="text-sm font-semibold text-slate-700">Risk Assessment</span>
+                </div>
+                <div className={clsx(
+                  'rounded-xl p-3 border',
+                  riskPreview.level === 'very_high' ? 'bg-red-50 border-red-200' :
+                  riskPreview.level === 'high' ? 'bg-orange-50 border-orange-200' :
+                  riskPreview.level === 'moderate' ? 'bg-amber-50 border-amber-200' :
+                  'bg-emerald-50 border-emerald-200'
+                )}>
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-xs font-bold uppercase tracking-wide" style={{ color: riskColor(riskPreview.level) }}>
+                      {riskLabel(riskPreview.level)} — Score {riskPreview.total}/10
+                    </span>
+                    {priorLesion?.risk_score && (
+                      <span className={clsx(
+                        'text-xs font-semibold flex items-center gap-1',
+                        riskPreview.total > priorLesion.risk_score.total ? 'text-red-600' :
+                        riskPreview.total < priorLesion.risk_score.total ? 'text-emerald-600' :
+                        'text-slate-500'
+                      )}>
+                        {riskPreview.total > priorLesion.risk_score.total && '↑ Worsening'}
+                        {riskPreview.total < priorLesion.risk_score.total && '↓ Improving'}
+                        {riskPreview.total === priorLesion.risk_score.total && '→ Stable'}
+                        <span className="text-slate-400">({priorLesion.risk_score.total}/10)</span>
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex gap-2 text-xs">
+                    <span className="bg-white px-2 py-0.5 rounded-full border">A:{riskPreview.asymmetry}</span>
+                    <span className="bg-white px-2 py-0.5 rounded-full border">B:{riskPreview.border}</span>
+                    <span className="bg-white px-2 py-0.5 rounded-full border">C:{riskPreview.color}</span>
+                    <span className="bg-white px-2 py-0.5 rounded-full border">D:{riskPreview.diameter}</span>
+                    <span className="bg-white px-2 py-0.5 rounded-full border">E:{riskPreview.evolution}</span>
+                  </div>
+                  <p className="text-xs text-slate-600 mt-2">{riskPreview.recommendation}</p>
+                </div>
               </div>
             )}
+          </div>
+        );
+
+      case 5:
+        return (
+          <div className="p-5 space-y-5">
+            {/* CPT Codes */}
+            {isProvider && (
+              <CPTCodeTracker
+                selectedCodes={cptCodes}
+                onChange={setCptCodes}
+                lesionContext={{
+                  action,
+                  biopsy_result: 'na',
+                  size_mm: size ?? (sizeCustom ? parseFloat(sizeCustom) : null),
+                  body_region: region,
+                  photos: photos.map((_, i) => ({ capture_type: i % 2 === 0 ? 'clinical' : 'dermoscopic' })),
+                }}
+              />
+            )}
+
+            {/* Dermoscopy Annotations */}
+            <DermoscopyAnnotations
+              annotations={dermAnnotations}
+              onChange={setDermAnnotations}
+            />
           </div>
         );
     }
   };
 
   // ── Step labels ────────────────────────────────────────────────────────────
-  const stepLabels = ['Photos', 'Size & Shape', 'Color', 'Assessment'];
+  const stepLabels = ['Photos', 'Size & Shape', 'Color', 'Assessment', 'Codes & Features'];
 
   return (
     <div className="slide-up fixed inset-0 bg-black/50 flex items-end md:items-center justify-center z-50">
@@ -380,6 +587,37 @@ export function LesionDocForm({ pendingCoords, region, visitId, onClose, onSave 
             ))}
           </div>
         </div>
+
+        {/* Re-documentation banner */}
+        {priorLesion && !existingLesion && (
+          <div className="bg-blue-50 border-b border-blue-200 px-5 py-3 flex items-center gap-2">
+            <TrendingUp size={16} className="text-blue-600 shrink-0" />
+            <div className="text-xs">
+              <span className="font-semibold text-blue-900">Re-documenting lesion</span>
+              <span className="text-blue-600 ml-1">
+                · Last seen {new Date(priorLesion.created_at).toLocaleDateString()}
+                {priorLesion.risk_score && (
+                  <span className="ml-1">
+                    · Prior risk: <span className={clsx('font-semibold', `text-${riskColor(priorLesion.risk_score.level)}-700`)}>{riskLabel(priorLesion.risk_score.level)}</span>
+                  </span>
+                )}
+              </span>
+            </div>
+          </div>
+        )}
+
+        {/* Editing banner */}
+        {existingLesion && (
+          <div className="bg-amber-50 border-b border-amber-200 px-5 py-3 flex items-center gap-2">
+            <Edit size={16} className="text-amber-600 shrink-0" />
+            <div className="text-xs">
+              <span className="font-semibold text-amber-900">Editing lesion</span>
+              <span className="text-amber-600 ml-1">
+                · Documented {new Date(existingLesion.created_at).toLocaleDateString()} by {existingLesion.created_by}
+              </span>
+            </div>
+          </div>
+        )}
 
         {/* Step content — scrollable */}
         <div className="flex-1 overflow-y-auto">

@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm test -- --run --no-coverage --reporter=verbose src/store/appStore.test.ts)",
+      "Bash(npm test -- --run --no-coverage --reporter=verbose)",
+      "Bash(npm test)"
+    ]
+  }
+}

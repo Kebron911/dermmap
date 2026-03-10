@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Shield, Lock, Eye, EyeOff, ChevronRight, CheckCircle2, Stethoscope } from 'lucide-react';
 import { useAppStore } from '../../store/appStore';
 import { DEMO_USERS } from '../../data/syntheticData';
+import { config } from '../../config';
 
 const roleColors = {
   ma: { bg: 'bg-sky-50', border: 'border-sky-200', icon: 'bg-sky-100 text-sky-700', badge: 'text-sky-700' },
@@ -24,17 +25,21 @@ export function LoginScreen() {
   const [mfaCode, setMfaCode] = useState('');
   const [step, setStep] = useState<'credentials' | 'mfa'>('credentials');
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const handleDemoLogin = (userId: string) => {
     const user = DEMO_USERS.find((u) => u.id === userId);
     if (!user) return;
     setSelectedDemo(userId);
     setEmail(user.email);
-    setPassword('Demo@DermMap2025!');
+    setPassword('demo123');
+    setError(null);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError(null);
+    
     if (step === 'credentials') {
       setLoading(true);
       setTimeout(() => {
@@ -43,28 +48,42 @@ export function LoginScreen() {
       }, 800);
     } else {
       setLoading(true);
-      setTimeout(() => {
-        const demoUser = DEMO_USERS.find((u) => u.id === selectedDemo) || DEMO_USERS[0];
-        login({
-          id: demoUser.id,
-          name: demoUser.name,
-          role: demoUser.role,
-          email: demoUser.email,
-          credentials: demoUser.credentials,
-        });
-        const landingPage = demoUser.role === 'ma' ? 'schedule' : demoUser.role === 'provider' ? 'queue' : 'analytics';
-        setCurrentPage(landingPage);
+      try {
+        const success = await login(email, password);
+        if (success) {
+          const loggedInUser = useAppStore.getState().currentUser;
+          const role = loggedInUser?.role ?? (DEMO_USERS.find((u) => u.email === email)?.role || 'ma');
+          const landingPage = role === 'ma' ? 'schedule' : role === 'provider' ? 'queue' : 'analytics';
+          setCurrentPage(landingPage);
+        } else {
+          setError('Invalid credentials. Please try again.');
+          setStep('credentials');
+        }
+      } catch (err) {
+        // Check if it's a connection error
+        const isConnectionError = err instanceof TypeError && 
+          (err.message?.includes('fetch failed') || err.message?.includes('Failed to fetch'));
+        
+        if (isConnectionError) {
+          setError('Cannot connect to server. Please start the Docker backend (see README.md)');
+        } else {
+          setError('Login failed. Please try again.');
+        }
+        setStep('credentials');
+      } finally {
         setLoading(false);
-      }, 600);
+      }
     }
   };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-teal-950 to-slate-900 flex flex-col items-center justify-center p-4">
       {/* Demo Banner */}
-      <div className="fixed top-0 inset-x-0 bg-amber-500 text-amber-950 text-center py-1.5 text-xs font-semibold tracking-wide z-50">
-        DEMO ENVIRONMENT — SYNTHETIC DATA ONLY — NOT FOR CLINICAL USE
-      </div>
+      {config.isDemo && (
+        <div className="fixed top-0 inset-x-0 bg-amber-500 text-amber-950 text-center py-1.5 text-xs font-semibold tracking-wide z-50">
+          DEMO ENVIRONMENT — SYNTHETIC DATA ONLY — NOT FOR CLINICAL USE
+        </div>
+      )}
 
       <div className="w-full max-w-md mt-8">
         {/* Logo */}
@@ -77,7 +96,7 @@ export function LoginScreen() {
         </div>
 
         {/* Demo Role Selection */}
-        <div className="card p-4 mb-4">
+        {config.isDemo && <div className="card p-4 mb-4">
           <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-3">
             Demo — Select a Role to Continue
           </p>
@@ -116,7 +135,7 @@ export function LoginScreen() {
               );
             })}
           </div>
-        </div>
+        </div>}
 
         {/* Login Form */}
         <div className="card p-6">
@@ -128,6 +147,12 @@ export function LoginScreen() {
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">
+            {error && (
+              <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
+                <p className="text-sm text-red-700">{error}</p>
+              </div>
+            )}
+            
             {step === 'credentials' ? (
               <>
                 <div>
@@ -166,7 +191,7 @@ export function LoginScreen() {
               <div>
                 <label className="label">Authentication Code</label>
                 <p className="text-xs text-slate-500 mb-3">
-                  Enter the 6-digit code from your authenticator app (demo: any 6 digits)
+                  Enter the 6-digit code from your authenticator app{config.isDemo ? ' (demo: any 6 digits)' : ''}
                 </p>
                 <input
                   type="text"
@@ -182,7 +207,7 @@ export function LoginScreen() {
 
             <button
               type="submit"
-              disabled={loading || (!selectedDemo && step === 'credentials')}
+              disabled={loading || (config.isDemo && !selectedDemo && step === 'credentials')}
               className="w-full btn-primary justify-center py-2.5 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {loading ? (

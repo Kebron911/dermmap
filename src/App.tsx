@@ -12,7 +12,10 @@ import { AuditLogPage } from './pages/AuditLogPage';
 import { UserManagementPage } from './pages/UserManagementPage';
 import { EHRIntegrationPage } from './pages/EHRIntegrationPage';
 import { SettingsPage } from './pages/SettingsPage';
-import { syncQueue } from './services/syncQueue';
+import { ProviderDashboardPage } from './pages/ProviderDashboardPage';
+import { QualityMetricsPage } from './pages/QualityMetricsPage';
+import { ReportBuilderPage } from './pages/ReportBuilderPage';
+import syncService from './services/syncService';
 import { auditLogger } from './services/auditLogger';
 import { analytics } from './services/analytics';
 import { setUser as setSentryUser } from './services/sentry';
@@ -31,6 +34,9 @@ function PageContent() {
     case 'bodymap': return <BodyMapPage />;
     case 'queue': return <VisitQueuePage />;
     case 'analytics': return <AnalyticsDashboard />;
+    case 'providers': return <ProviderDashboardPage />;
+    case 'quality': return <QualityMetricsPage />;
+    case 'reports': return <ReportBuilderPage />;
     case 'audit': return <AuditLogPage />;
     case 'users': return <UserManagementPage />;
     case 'ehr': return <EHRIntegrationPage />;
@@ -42,10 +48,9 @@ function PageContent() {
 export default function App() {
   const { currentUser } = useAppStore();
 
-  // Start offline sync queue listener
+  // Start offline sync service
   useEffect(() => {
-    const cleanup = syncQueue.startAutoSync();
-    return cleanup;
+    syncService.init();
   }, []);
 
   // Keep audit logger and error reporting in sync with current user

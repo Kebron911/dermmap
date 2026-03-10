@@ -1,10 +1,12 @@
 import {
   Calendar, Users, Search, Activity, Settings,
   LogOut, BarChart3, ClipboardList, Link, Shield,
-  Stethoscope, ChevronRight
+  Stethoscope, ChevronRight, FileText, Target, MapPin
 } from 'lucide-react';
 import { useAppStore } from '../../store/appStore';
 import { OfflineStatusDot } from './OfflineBanner';
+import { LocationSelector, CLINIC_LOCATIONS } from './LocationSelector';
+import { useState } from 'react';
 import clsx from 'clsx';
 
 interface NavItem {
@@ -42,6 +44,24 @@ const navItems: NavItem[] = [
     roles: ['admin', 'provider'],
   },
   {
+    id: 'providers',
+    label: 'Provider Dashboard',
+    icon: <Stethoscope size={18} />,
+    roles: ['admin', 'provider'],
+  },
+  {
+    id: 'quality',
+    label: 'Quality Metrics',
+    icon: <Target size={18} />,
+    roles: ['admin', 'provider'],
+  },
+  {
+    id: 'reports',
+    label: 'Report Builder',
+    icon: <FileText size={18} />,
+    roles: ['admin'],
+  },
+  {
     id: 'users',
     label: 'User Management',
     icon: <Users size={18} />,
@@ -69,6 +89,7 @@ const navItems: NavItem[] = [
 
 export function Sidebar() {
   const { currentUser, logout, currentPage, setCurrentPage } = useAppStore();
+  const [selectedLocation, setSelectedLocation] = useState<string | null>(null);
   if (!currentUser) return null;
 
   const role = currentUser.role;
@@ -113,6 +134,15 @@ export function Sidebar() {
               {roleLabel}
             </span>
           </div>
+        </div>
+        {/* Location selector */}
+        <div className="mt-3">
+          <LocationSelector
+            locations={CLINIC_LOCATIONS}
+            selectedLocationId={selectedLocation}
+            onSelect={setSelectedLocation}
+            compact
+          />
         </div>
       </div>
 

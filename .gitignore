@@ -4,3 +4,8 @@ dist-ssr
 *.local
 .env
 .env.*
+
+# Docker
+.env.docker
+docker-compose.override.yml
+backup.sql

@@ -37,11 +37,14 @@ describe('Sidebar', () => {
   });
 
   it('renders role-specific navigation and user info', () => {
-    useAppStore.getState().login({
-      id: 'ma-100',
-      name: 'Jamie Doe',
-      role: 'ma',
-      email: 'jamie@example.com',
+    useAppStore.setState({
+      currentUser: {
+        id: 'ma-100',
+        name: 'Jamie Doe',
+        role: 'ma',
+        email: 'jamie@example.com',
+      },
+      token: 'test-token',
     });
 
     render(<Sidebar />);
@@ -56,11 +59,14 @@ describe('Sidebar', () => {
   it('updates the active page and supports logout', async () => {
     const user = userEvent.setup();
 
-    useAppStore.getState().login({
-      id: 'ma-100',
-      name: 'Jamie Doe',
-      role: 'ma',
-      email: 'jamie@example.com',
+    useAppStore.setState({
+      currentUser: {
+        id: 'ma-100',
+        name: 'Jamie Doe',
+        role: 'ma',
+        email: 'jamie@example.com',
+      },
+      token: 'test-token',
     });
 
     render(<Sidebar />);

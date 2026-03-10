@@ -2,24 +2,74 @@
 
 Full‐body dermatology lesion mapping and documentation platform with enterprise features.
 
-## Quick Start
+## 🐳 Docker Quick Start (Recommended)
+
+**One-command setup** - No PostgreSQL, Node.js, or npm installation required!
+
+```powershell
+# Windows - Run with PowerShell
+.\start-docker.ps1
+
+# Or start development mode with hot reload
+.\start-docker.ps1 -Dev
+
+# Linux/macOS
+./start-docker.sh
+# Or: ./start-docker.sh dev
+```
+
+**Access the application:**
+- Frontend: http://localhost (production) or http://localhost:5173 (dev)
+- Backend API: http://localhost:3001
+- Database: PostgreSQL on port 54320 (isolated from other PostgreSQL instances)
+- Demo credentials: alex.ma@dermmap.com / demo123 (MA), sarah.dr@dermmap.com / demo123 (Provider)
+
+📖 **Full Docker documentation:** [DOCKER.md](DOCKER.md)  
+🧪 **Integration testing guide:** [INTEGRATION_TESTING.md](INTEGRATION_TESTING.md)
+
+---
+
+## ✅ What's Included
+
+This is a fully integrated full-stack application:
+
+- ✅ **PostgreSQL Database**: Persistent storage with schema and demo data
+- ✅ **Express Backend API**: JWT authentication, RESTful endpoints
+- ✅ **React Frontend**: Offline-first PWA with IndexedDB caching
+- ✅ **Docker Compose**: One-command deployment for all services
+- ✅ **Auto-Sync**: Automatic sync when online, queue when offline
+- ✅ **Photo Storage**: Binary photo storage in PostgreSQL (BLOB)
+
+---
+
+## 💻 Local Development (Without Docker)
 
 ```bash
 # Install dependencies
 npm install
 
-# Start dev server
+# Start dev server (frontend only)
 npm run dev
 
 # Run unit tests with coverage
 npm test
 
-# Run E2E tests
-npm run test:e2e
-
 # Production build
 npm run build
 ```
+
+⚠️ **Note**: Running `npm run dev` without Docker will show connection errors because the backend API is not running.
+
+**Solutions**:
+1. ✅ **Recommended**: Use Docker (see above) for full-stack development
+2. 📖 See [LOCAL_DEV_GUIDE.md](LOCAL_DEV_GUIDE.md) for:
+   - Frontend-only development (no backend needed)
+   - Manual backend setup (PostgreSQL + Express)
+   - Troubleshooting connection errors
+
+📖 **Full-stack setup (PostgreSQL + Backend):** [README_FULLSTACK.md](README_FULLSTACK.md)
+
+---
 
 ## Features
 

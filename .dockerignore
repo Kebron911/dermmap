@@ -18,3 +18,20 @@ Thumbs.db
 
 # Coverage
 coverage/
+
+# Backend (don't copy into frontend container)
+backend/
+
+# Tests
+*.test.ts
+*.test.tsx
+
+# Documentation
+README.md
+README_FULLSTACK.md
+*.md
+
+# Git
+.git
+.gitignore
+.github

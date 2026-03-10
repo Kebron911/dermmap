@@ -1,9 +1,13 @@
+import { useState, useEffect } from 'react';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell, LineChart, Line, Legend, AreaChart, Area
 } from 'recharts';
 import { TrendingUp, Clock, Camera, Users, Activity, Download, FileText, BarChart3 } from 'lucide-react';
 import { CLINIC_STATS } from '../data/syntheticData';
+import { config } from '../config';
+import { api } from '../services/api';
+import type { ClinicStats } from '../types';
 
 const COLORS = ['#0D9488', '#3B82F6', '#F59E0B', '#EF4444', '#10B981', '#8B5CF6'];
 
@@ -16,7 +20,16 @@ const roiData = [
 ];
 
 export function AnalyticsDashboard() {
-  const stats = CLINIC_STATS;
+  const [stats, setStats] = useState<ClinicStats>(CLINIC_STATS);
+  const [loading, setLoading] = useState(!config.isDemo);
+
+  useEffect(() => {
+    if (config.isDemo) return; // demo mode: use CLINIC_STATS as-is
+    api.get<ClinicStats>('/analytics')
+      .then(data => setStats(data))
+      .catch(() => { /* keep CLINIC_STATS fallback */ })
+      .finally(() => setLoading(false));
+  }, []);
 
   const metricCards = [
     {
@@ -62,7 +75,9 @@ export function AnalyticsDashboard() {
             <BarChart3 size={24} className="text-teal-600" />
             Analytics Dashboard
           </h1>
-          <p className="text-slate-500 text-sm mt-1">Comprehensive practice performance metrics — last 6 months</p>
+          <p className="text-slate-500 text-sm mt-1">
+            {loading ? 'Loading live data…' : 'Comprehensive practice performance metrics — last 6 months'}
+          </p>
         </div>
         <div className="flex gap-2">
           <button className="btn-secondary text-sm">

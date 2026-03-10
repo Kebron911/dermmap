@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { RotateCcw, Plus, ZoomIn, Info, MapPin } from 'lucide-react';
+import { useState, useRef, useCallback } from 'react';
+import { RotateCcw, Plus, ZoomIn, ZoomOut, Info, MapPin } from 'lucide-react';
 import { BodyMapSVG, getLesionColor, getLesionLabel } from './BodyMapSVG';
 import { Lesion, BodyView, Visit } from '../../types';
 import clsx from 'clsx';
@@ -35,6 +35,33 @@ export function BodyMapView({
 }: BodyMapViewProps) {
   const [activeView, setActiveView] = useState<BodyView>('anterior');
   const [placingMode, setPlacingMode] = useState(false);
+  const [scale, setScale] = useState(1);
+  const pinchRef = useRef<{ dist: number; scale: number } | null>(null);
+
+  const clampScale = (s: number) => Math.min(4, Math.max(1, s));
+
+  const handleTouchStart = useCallback((e: React.TouchEvent) => {
+    if (e.touches.length === 2) {
+      const dx = e.touches[0].clientX - e.touches[1].clientX;
+      const dy = e.touches[0].clientY - e.touches[1].clientY;
+      pinchRef.current = { dist: Math.hypot(dx, dy), scale };
+    }
+  }, [scale]);
+
+  const handleTouchMove = useCallback((e: React.TouchEvent) => {
+    if (e.touches.length === 2 && pinchRef.current) {
+      e.preventDefault();
+      const dx = e.touches[0].clientX - e.touches[1].clientX;
+      const dy = e.touches[0].clientY - e.touches[1].clientY;
+      const newDist = Math.hypot(dx, dy);
+      const ratio = newDist / pinchRef.current.dist;
+      setScale(clampScale(pinchRef.current.scale * ratio));
+    }
+  }, []);
+
+  const handleTouchEnd = useCallback(() => {
+    pinchRef.current = null;
+  }, []);
 
   // Collect all lesions, marking current visit lesions
   const allLesions: Lesion[] = [];
@@ -88,12 +115,35 @@ export function BodyMapView({
 
         {/* Zoom / Reset — desktop only */}
         <div className="hidden sm:flex items-center gap-1">
-          <button className="p-2 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-100 min-h-[40px] min-w-[40px] flex items-center justify-center">
+          <button
+            onClick={() => setScale(s => clampScale(s + 0.5))}
+            disabled={scale >= 4}
+            className="p-2 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-100 min-h-[40px] min-w-[40px] flex items-center justify-center disabled:opacity-40"
+            title="Zoom in"
+          >
             <ZoomIn size={16} />
           </button>
-          <button className="p-2 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-100 min-h-[40px] min-w-[40px] flex items-center justify-center">
+          <button
+            onClick={() => setScale(s => clampScale(s - 0.5))}
+            disabled={scale <= 1}
+            className="p-2 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-100 min-h-[40px] min-w-[40px] flex items-center justify-center disabled:opacity-40"
+            title="Zoom out"
+          >
+            <ZoomOut size={16} />
+          </button>
+          <button
+            onClick={() => setScale(1)}
+            disabled={scale === 1}
+            className="p-2 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-100 min-h-[40px] min-w-[40px] flex items-center justify-center disabled:opacity-40"
+            title="Reset zoom"
+          >
             <RotateCcw size={16} />
           </button>
+          {scale > 1 && (
+            <span className="text-xs font-medium text-teal-600 bg-teal-50 px-1.5 py-0.5 rounded">
+              {Math.round(scale * 100)}%
+            </span>
+          )}
         </div>
       </div>
 
@@ -101,6 +151,9 @@ export function BodyMapView({
       <div
         className="relative bg-slate-50 rounded-2xl border border-slate-100 overflow-hidden"
         style={{ minHeight: 'clamp(280px, 55vw, 520px)' }}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
       >
         {/* Grid background */}
         <div
@@ -115,7 +168,14 @@ export function BodyMapView({
         />
 
         {/* SVG */}
-        <div className="flex items-center justify-center h-full py-4">
+        <div
+          className="flex items-center justify-center h-full py-4"
+          style={{
+            transform: `scale(${scale})`,
+            transformOrigin: 'center center',
+            transition: 'transform 0.1s ease-out',
+          }}
+        >
           <BodyMapSVG
             view={activeView}
             lesions={allLesions}

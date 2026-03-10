@@ -22,7 +22,7 @@ const EHR_SYSTEMS = [
     status: 'configured',
     description: 'EMA derm-specific EHR — most common in dermatology practices',
     fhir: true,
-    lastSync: '2025-01-08T14:05:33Z',
+    lastSync: null as string | null,
     syncStatus: 'success',
   },
   {
@@ -60,7 +60,7 @@ const EHR_SYSTEMS = [
 export function EHRIntegrationPage() {
   const [activeEHR, setActiveEHR] = useState<string | null>('modmed');
   const [fhirEndpoint, setFhirEndpoint] = useState('https://fhir.modmed.com/v1/r4');
-  const [apiKey, setApiKey] = useState('sk_demo_••••••••••••••••');
+  const [apiKey, setApiKey] = useState('');
 
   const selectedEHR = EHR_SYSTEMS.find((e) => e.id === activeEHR);
 
@@ -188,7 +188,9 @@ export function EHRIntegrationPage() {
                         <div>
                           <div className="font-semibold text-emerald-800">Connected & Syncing</div>
                           <div className="text-xs text-emerald-600 mt-0.5">
-                            Last synced: Jan 8, 2025 at 2:05 PM · 312 patients synced
+                            {selectedEHR.lastSync
+                              ? `Last synced: ${new Date(selectedEHR.lastSync).toLocaleString()}`
+                              : 'Not yet synced — click Sync Now'}
                           </div>
                         </div>
                       </div>

@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import { Clock, Calendar, ChevronRight, Activity, Camera, Users, FileText, TrendingUp } from 'lucide-react';
 import { useAppStore } from '../store/appStore';
 import { TODAY_APPOINTMENTS } from '../data/syntheticData';
@@ -19,29 +20,67 @@ const statusLabels: Record<string, string> = {
 };
 
 export function SchedulePage() {
-  const { currentUser, setSelectedPatient, setCurrentVisit, setCurrentPage, startNewVisit } = useAppStore();
+  const { currentUser, patients, setSelectedPatient, setCurrentVisit, setCurrentPage, startNewVisit, ehrSynced } = useAppStore();
   const today = format(new Date(), 'EEEE, MMMM d, yyyy');
+  const todayStr = format(new Date(), 'yyyy-MM-dd');
+
+  // Derive today's appointments from the patients store; fall back to demo data
+  const appointments = useMemo(() => {
+    const fromStore = patients.flatMap(p =>
+      p.visits
+        .filter(v => v.visit_date.startsWith(todayStr))
+        .map(v => ({ time: format(new Date(v.created_at || v.visit_date), 'h:mm a'), patient: p, reason: 'Dermatology visit', status: v.status }))
+    ).sort((a, b) => a.time.localeCompare(b.time));
+    return fromStore.length > 0 ? fromStore : TODAY_APPOINTMENTS.map((a, i) => ({
+      ...a,
+      status: i < 3 ? 'locked' : i === 3 ? 'in_progress' : 'pending_review',
+    }));
+  }, [patients, todayStr]);
+
+  // Compute today-specific stats from the patients store
+  const todayVisits = useMemo(() =>
+    patients.flatMap(p => p.visits.filter(v => v.visit_date.startsWith(todayStr))),
+    [patients, todayStr]);
+
+  const completedToday = todayVisits.filter(v => v.status === 'locked' || v.status === 'signed').length;
+  const photoCountToday = todayVisits.reduce((acc, v) => acc + v.lesions.reduce((s, l) => s + l.photos.length, 0), 0);
+  const docTimes = todayVisits.map(v => v.documentation_time_sec).filter((t): t is number => t != null);
+  const avgDocTimeStr = docTimes.length
+    ? `${(docTimes.reduce((a, b) => a + b, 0) / docTimes.length).toFixed(1)}s`
+    : '7.8s';
+
+  // Compute this-week stats from the patients store
+  const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+  const weekVisits = useMemo(() =>
+    patients.flatMap(p => p.visits.filter(v => v.visit_date >= weekAgo)),
+    [patients, weekAgo]);
+  const weekPhotos = weekVisits.reduce((acc, v) => acc + v.lesions.reduce((s, l) => s + l.photos.length, 0), 0);
+  const weekBiopsies = weekVisits.reduce((acc, v) => acc + v.lesions.filter(l => l.action === 'biopsy_scheduled' || l.action === 'biopsy_performed').length, 0);
+  const weekDocTimes = weekVisits.map(v => v.documentation_time_sec).filter((t): t is number => t != null);
+  const weekAvgDocStr = weekDocTimes.length
+    ? `${(weekDocTimes.reduce((a, b) => a + b, 0) / weekDocTimes.length).toFixed(1)}s`
+    : '7.8s';
 
   const quickStats = [
-    { label: 'Scheduled Today', value: TODAY_APPOINTMENTS.length, icon: <Calendar size={18} />, color: 'text-blue-600 bg-blue-50' },
-    { label: 'Completed', value: 3, icon: <Activity size={18} />, color: 'text-emerald-600 bg-emerald-50' },
-    { label: 'Avg. Doc Time', value: '7.8s', icon: <Clock size={18} />, color: 'text-teal-600 bg-teal-50' },
-    { label: 'Photos Today', value: 14, icon: <Camera size={18} />, color: 'text-violet-600 bg-violet-50' },
+    { label: 'Scheduled Today', value: appointments.length, icon: <Calendar size={18} />, color: 'text-blue-600 bg-blue-50' },
+    { label: 'Completed', value: completedToday || TODAY_APPOINTMENTS.filter((_, i) => i < 3).length, icon: <Activity size={18} />, color: 'text-emerald-600 bg-emerald-50' },
+    { label: 'Avg. Doc Time', value: avgDocTimeStr, icon: <Clock size={18} />, color: 'text-teal-600 bg-teal-50' },
+    { label: 'Photos Today', value: photoCountToday || 14, icon: <Camera size={18} />, color: 'text-violet-600 bg-violet-50' },
   ];
 
-  const handleOpenPatient = (patient: typeof TODAY_APPOINTMENTS[0]['patient']) => {
-    setSelectedPatient(patient);
+  const handleOpenPatient = (patient: (typeof appointments)[0]['patient']) => {
+    setSelectedPatient(patient as Parameters<typeof setSelectedPatient>[0]);
     setCurrentPage('bodymap');
   };
 
-  const handleStartVisit = (patient: typeof TODAY_APPOINTMENTS[0]['patient']) => {
-    setSelectedPatient(patient);
-    const visit = startNewVisit(patient);
+  const handleStartVisit = async (patient: (typeof appointments)[0]['patient']) => {
+    setSelectedPatient(patient as Parameters<typeof setSelectedPatient>[0]);
+    const visit = await startNewVisit(patient as Parameters<typeof startNewVisit>[0]);
     setCurrentVisit(visit);
     setCurrentPage('bodymap');
   };
 
-  const currentAppt = TODAY_APPOINTMENTS.find((_, i) => i === 3);
+  const currentAppt = appointments.find((_, i) => i === (appointments.findIndex(a => 'status' in a && a.status === 'in_progress') || 3));
 
   return (
     <div className="p-4 md:p-6 max-w-6xl mx-auto fade-in">
@@ -52,11 +91,13 @@ export function SchedulePage() {
             <h1 className="text-xl md:text-2xl font-bold text-slate-900">Good morning, {currentUser?.name.split(' ')[0]}</h1>
             <p className="text-slate-500 text-sm mt-0.5">{today}</p>
           </div>
+          {ehrSynced && (
           <div className="flex items-center gap-2 bg-emerald-50 border border-emerald-200 rounded-xl px-3 py-1.5 shrink-0">
             <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" />
             <span className="text-xs md:text-sm font-medium text-emerald-700 hidden sm:inline">EHR Synced — ModMed EMA</span>
             <span className="text-xs font-medium text-emerald-700 sm:hidden">EHR Synced</span>
           </div>
+          )}
         </div>
       </div>
 
@@ -120,13 +161,13 @@ export function SchedulePage() {
                 <Calendar size={16} className="text-teal-600" />
                 Today's Appointments
               </h2>
-              <span className="text-xs text-slate-400">{TODAY_APPOINTMENTS.length} patients</span>
+              <span className="text-xs text-slate-400">{appointments.length} patients</span>
             </div>
             <div className="divide-y divide-slate-50">
-              {TODAY_APPOINTMENTS.map((appt, i) => {
+              {appointments.map((appt, i) => {
                 const lastVisit = appt.patient.visits.at(-1);
-                const isDone = i < 3;
-                const isCurrent = i === 3;
+                const isDone = 'status' in appt ? (appt.status === 'locked' || appt.status === 'signed') : i < 3;
+                const isCurrent = 'status' in appt ? appt.status === 'in_progress' : i === 3;
 
                 return (
                   <div
@@ -226,19 +267,19 @@ export function SchedulePage() {
             <div className="space-y-3">
               <div className="flex justify-between items-center">
                 <span className="text-xs text-slate-500">Visits documented</span>
-                <span className="text-sm font-semibold text-slate-900">24</span>
+                <span className="text-sm font-semibold text-slate-900">{weekVisits.length || 24}</span>
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-xs text-slate-500">Photos captured</span>
-                <span className="text-sm font-semibold text-slate-900">87</span>
+                <span className="text-sm font-semibold text-slate-900">{weekPhotos || 87}</span>
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-xs text-slate-500">Avg. doc time</span>
-                <span className="text-sm font-semibold text-teal-700">7.8s</span>
+                <span className="text-sm font-semibold text-teal-700">{weekAvgDocStr}</span>
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-xs text-slate-500">Biopsy flags</span>
-                <span className="text-sm font-semibold text-amber-700">3</span>
+                <span className="text-sm font-semibold text-amber-700">{weekBiopsies || 3}</span>
               </div>
             </div>
             <div className="mt-3 pt-3 border-t border-slate-100">

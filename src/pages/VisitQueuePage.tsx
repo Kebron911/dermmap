@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { Clock, CheckCircle, AlertCircle, ChevronRight, Lock, Camera, User, FileText, Columns2, ArrowLeft } from 'lucide-react';
 import { useAppStore } from '../store/appStore';
 import { Visit, Patient, Lesion } from '../types';
@@ -12,11 +12,13 @@ import clsx from 'clsx';
 interface VisitWithPatient { visit: Visit; patient: Patient }
 
 export function VisitQueuePage() {
-  const { patients, setSelectedPatient, setCurrentVisit, setCurrentPage } = useAppStore();
+  const { patients, setSelectedPatient, setCurrentVisit, setCurrentPage, completeVisit, updateLesion } = useAppStore();
   const [activeVisit, setActiveVisitState] = useState<VisitWithPatient | null>(null);
   const [showComparison, setShowComparison] = useState(false);
   const [comparisonLesion, setComparisonLesion] = useState<Lesion | null>(null);
   const [exportingPDF, setExportingPDF] = useState(false);
+  const [signingOff, setSigningOff] = useState(false);
+  const [lesionNotes, setLesionNotes] = useState<Record<string, string>>({});
 
   // Collect pending_review visits
   const pendingVisits: VisitWithPatient[] = [];
@@ -28,16 +30,46 @@ export function VisitQueuePage() {
     });
   });
 
-  const handleSelectVisit = (vp: VisitWithPatient) => {
+  const handleSelectVisitWrapped = useCallback((vp: VisitWithPatient) => {
     setActiveVisitState(vp);
     setSelectedPatient(vp.patient);
     setCurrentVisit(vp.visit);
+    // Pre-populate notes from existing clinical_notes
+    const init: Record<string, string> = {};
+    vp.visit.lesions.forEach(l => { if (l.clinical_notes) init[l.lesion_id] = l.clinical_notes; });
+    setLesionNotes(init);
+  }, [setSelectedPatient, setCurrentVisit]);
+
+  const handleLesionNoteChange = (lesionId: string, value: string) => {
+    setLesionNotes((prev) => ({ ...prev, [lesionId]: value }));
   };
 
-  const handleSignOff = () => {
-    alert('Visit signed and locked. In production, this updates the visit status and creates an audit log entry.');
-    setActiveVisitState(null);
-    setCurrentPage('queue');
+  const handleSaveLesionNote = async (lesion: Lesion) => {
+    if (!activeVisit) return;
+    const updated = { ...lesion, clinical_notes: lesionNotes[lesion.lesion_id] ?? lesion.clinical_notes };
+    await updateLesion(activeVisit.visit.visit_id, updated);
+  };
+
+  const handleSignOff = async () => {
+    if (!activeVisit || signingOff) return;
+    setSigningOff(true);
+    try {
+      // Save any unsaved clinical notes first
+      await Promise.all(
+        activeVisit.visit.lesions.map((lesion) => {
+          const note = lesionNotes[lesion.lesion_id];
+          if (note !== undefined && note !== lesion.clinical_notes) {
+            return updateLesion(activeVisit.visit.visit_id, { ...lesion, clinical_notes: note });
+          }
+          return Promise.resolve();
+        })
+      );
+      await completeVisit(activeVisit.visit.visit_id, 'locked', `Reviewed and approved by provider`);
+      setActiveVisitState(null);
+      setCurrentPage('queue');
+    } finally {
+      setSigningOff(false);
+    }
   };
 
   const handleExportPDF = async () => {
@@ -75,7 +107,7 @@ export function VisitQueuePage() {
             return (
               <button
                 key={visit.visit_id}
-                onClick={() => handleSelectVisit({ visit, patient })}
+                onClick={() => handleSelectVisitWrapped({ visit, patient })}
                 className={clsx(
                   'w-full text-left p-3 rounded-xl border transition-all',
                   isActive
@@ -178,10 +210,11 @@ export function VisitQueuePage() {
                 </button>
                 <button
                   onClick={handleSignOff}
-                  className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-medium px-4 py-2 rounded-lg text-sm transition-colors"
+                  disabled={signingOff}
+                  className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-60 text-white font-medium px-4 py-2 rounded-lg text-sm transition-colors"
                 >
-                  <Lock size={16} />
-                  Sign & Lock Visit
+                  {signingOff ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> : <Lock size={16} />}
+                  {signingOff ? 'Signing...' : 'Sign & Lock Visit'}
                 </button>
               </div>
             </div>
@@ -258,9 +291,10 @@ export function VisitQueuePage() {
                             <div className="flex gap-2 mt-3">
                               {lesion.photos.map((photo, pi) => (
                                 <div key={photo.photo_id} className="w-14 h-14 rounded-lg overflow-hidden bg-slate-200 border border-slate-200 relative">
-                                  <div className="w-full h-full bg-gradient-to-br from-slate-700 to-slate-900 flex items-center justify-center">
-                                    <Camera size={16} className="text-slate-400" />
-                                  </div>
+                                  {photo.url
+                                    ? <img src={photo.url} alt={photo.capture_type} className="w-full h-full object-cover" />
+                                    : <div className="w-full h-full bg-gradient-to-br from-slate-700 to-slate-900 flex items-center justify-center"><Camera size={16} className="text-slate-400" /></div>
+                                  }
                                   <div className="absolute bottom-0 inset-x-0 bg-black/50 text-white text-xs text-center py-0.5">
                                     {photo.capture_type === 'dermoscopic' ? 'Derm.' : 'Clin.'}
                                   </div>
@@ -279,7 +313,9 @@ export function VisitQueuePage() {
                               className="w-full text-xs border border-slate-200 rounded-lg p-2 text-slate-700 placeholder-slate-300 focus:outline-none focus:ring-1 focus:ring-teal-400 resize-none"
                               rows={2}
                               placeholder="Add clinical notes, differential diagnosis, plan..."
-                              defaultValue={lesion.clinical_notes}
+                              value={lesionNotes[lesion.lesion_id] ?? (lesion.clinical_notes || '')}
+                              onChange={(e) => handleLesionNoteChange(lesion.lesion_id, e.target.value)}
+                              onBlur={() => handleSaveLesionNote(lesion)}
                             />
                           </div>
                           {lesion.photos.length > 0 && (
@@ -311,10 +347,11 @@ export function VisitQueuePage() {
                 </div>
                 <button
                   onClick={handleSignOff}
-                  className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-medium px-5 py-2.5 rounded-xl text-sm transition-colors shadow-sm shrink-0"
+                  disabled={signingOff}
+                  className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-60 text-white font-medium px-5 py-2.5 rounded-xl text-sm transition-colors shadow-sm shrink-0"
                 >
-                  <CheckCircle size={16} />
-                  Sign & Lock
+                  {signingOff ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> : <CheckCircle size={16} />}
+                  {signingOff ? 'Signing...' : 'Sign & Lock'}
                 </button>
               </div>
             </div>
@@ -343,10 +380,11 @@ export function VisitQueuePage() {
       <div className="sm:hidden fixed bottom-16 inset-x-0 px-4 pb-2 z-30">
         <button
           onClick={handleSignOff}
-          className="w-full flex items-center justify-center gap-3 bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white font-bold py-4 rounded-2xl text-base shadow-xl transition-colors"
+          disabled={signingOff}
+          className="w-full flex items-center justify-center gap-3 bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 disabled:opacity-60 text-white font-bold py-4 rounded-2xl text-base shadow-xl transition-colors"
         >
-          <Lock size={18} />
-          Sign &amp; Lock Visit
+          {signingOff ? <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" /> : <Lock size={18} />}
+          {signingOff ? 'Signing...' : 'Sign & Lock Visit'}
         </button>
       </div>
     )}

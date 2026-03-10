@@ -7,6 +7,8 @@ import {
 import { Lesion, Visit } from '../../types';
 import { format, parseISO } from 'date-fns';
 import clsx from 'clsx';
+import { useAppStore } from '../../store/appStore';
+import jsPDF from 'jspdf';
 
 interface PhotoComparisonProps {
   lesion: Lesion;
@@ -26,10 +28,25 @@ const LESION_GRADIENTS = [
 ];
 
 function PhotoPlaceholder({
-  index, captureType, date, size = 'large'
+  index, captureType, date, size = 'large', url
 }: {
-  index: number; captureType: string; date: string; size?: 'large' | 'small';
+  index: number; captureType: string; date: string; size?: 'large' | 'small'; url?: string;
 }) {
+  if (url) {
+    return (
+      <div className={clsx('relative flex-shrink-0 overflow-hidden', size === 'large' ? 'w-full h-full' : 'w-full h-full')}>
+        <img src={url} alt={`${captureType} photo`} className="w-full h-full object-cover" />
+        <div className="absolute top-2 left-2">
+          <span className={clsx('text-xs font-bold px-2 py-0.5 rounded-full', captureType === 'dermoscopic' ? 'bg-violet-900/80 text-violet-200' : 'bg-black/60 text-white')}>
+            {captureType === 'dermoscopic' ? 'Dermoscopic' : 'Clinical'}
+          </span>
+        </div>
+        <div className="absolute bottom-2 right-2 text-xs text-white/60 font-mono bg-black/40 px-1.5 py-0.5 rounded">
+          {format(parseISO(date), 'MM/dd/yy')}
+        </div>
+      </div>
+    );
+  }
   const gradients = [
     { bg: '#2D1B0E', spots: ['#8B4513', '#A0522D', '#4A2810', '#6B3A1F', '#3D1A00'] },
     { bg: '#1A0A00', spots: ['#5C2D0E', '#7A3B1A', '#3A1500', '#6B2F10', '#2D1000'] },
@@ -103,6 +120,8 @@ function SideBySideView({
   right: { visit: Visit; lesion: Lesion; photoIdx: number };
   zoom: number;
 }) {
+  const leftPhoto = left.lesion.photos[left.photoIdx];
+  const rightPhoto = right.lesion.photos[right.photoIdx];
   return (
     <div className="flex gap-1 h-full">
       <div className="flex-1 flex flex-col gap-2">
@@ -112,8 +131,9 @@ function SideBySideView({
         <div className="flex-1 rounded-xl overflow-hidden border border-slate-700" style={{ transform: `scale(${zoom})`, transformOrigin: 'center' }}>
           <PhotoPlaceholder
             index={0}
-            captureType={left.lesion.photos[left.photoIdx]?.capture_type || 'clinical'}
+            captureType={leftPhoto?.capture_type || 'clinical'}
             date={left.visit.visit_date}
+            url={leftPhoto?.url}
           />
         </div>
         <div className="flex justify-center gap-2 text-xs text-slate-400">
@@ -134,8 +154,9 @@ function SideBySideView({
         <div className="flex-1 rounded-xl overflow-hidden border border-teal-700/50" style={{ transform: `scale(${zoom})`, transformOrigin: 'center' }}>
           <PhotoPlaceholder
             index={2}
-            captureType={right.lesion.photos[right.photoIdx]?.capture_type || 'clinical'}
+            captureType={rightPhoto?.capture_type || 'clinical'}
             date={right.visit.visit_date}
+            url={rightPhoto?.url}
           />
         </div>
         <div className="flex justify-center gap-2 text-xs text-slate-400">
@@ -148,22 +169,27 @@ function SideBySideView({
 }
 
 function OverlayView({
-  opacity, zoom
+  left, right, opacity, zoom
 }: {
-  opacity: number; zoom: number;
+  left: { visit: Visit; lesion: Lesion; photoIdx: number };
+  right: { visit: Visit; lesion: Lesion; photoIdx: number };
+  opacity: number;
+  zoom: number;
 }) {
+  const leftPhoto = left.lesion.photos[left.photoIdx];
+  const rightPhoto = right.lesion.photos[right.photoIdx];
   return (
     <div className="flex flex-col items-center gap-3 h-full">
       <div className="flex-1 relative w-full rounded-xl overflow-hidden border border-slate-700">
         <div className="absolute inset-0" style={{ transform: `scale(${zoom})`, transformOrigin: 'center' }}>
-          <PhotoPlaceholder index={0} captureType="clinical" date="2024-01-15" />
+          <PhotoPlaceholder index={0} captureType={leftPhoto?.capture_type || 'clinical'} date={left.visit.visit_date} url={leftPhoto?.url} />
         </div>
         <div className="absolute inset-0" style={{ opacity, transform: `scale(${zoom})`, transformOrigin: 'center' }}>
-          <PhotoPlaceholder index={2} captureType="clinical" date="2025-01-08" />
+          <PhotoPlaceholder index={2} captureType={rightPhoto?.capture_type || 'clinical'} date={right.visit.visit_date} url={rightPhoto?.url} />
         </div>
         <div className="absolute top-3 inset-x-3 flex justify-between text-xs">
-          <span className="bg-black/70 text-white px-2 py-1 rounded">Jan 2024</span>
-          <span className="bg-teal-900/70 text-teal-200 px-2 py-1 rounded">Jan 2025 ({Math.round(opacity * 100)}%)</span>
+          <span className="bg-black/70 text-white px-2 py-1 rounded">{format(parseISO(left.visit.visit_date), 'MMM yyyy')}</span>
+          <span className="bg-teal-900/70 text-teal-200 px-2 py-1 rounded">{format(parseISO(right.visit.visit_date), 'MMM yyyy')} ({Math.round(opacity * 100)}%)</span>
         </div>
       </div>
     </div>
@@ -181,6 +207,7 @@ function GridView({ visits }: { visits: { visit: Visit; lesion: Lesion }[] }) {
               captureType={lesion.photos[0]?.capture_type || 'clinical'}
               date={visit.visit_date}
               size="small"
+              url={lesion.photos[0]?.url}
             />
           </div>
           <div className="text-xs text-center text-slate-400">
@@ -260,11 +287,71 @@ export function PhotoComparison({ lesion, allVisitLesions, onClose }: PhotoCompa
   const [zoom, setZoom] = useState(1);
   const [leftIdx, setLeftIdx] = useState(0);
   const [rightIdx, setRightIdx] = useState(Math.max(allVisitLesions.length - 1, 0));
+  const [addingToBiopsy, setAddingToBiopsy] = useState(false);
+  const [exportingPDF, setExportingPDF] = useState(false);
+
+  const { updateLesion } = useAppStore();
 
   const leftEntry = allVisitLesions[leftIdx];
   const rightEntry = allVisitLesions[rightIdx];
 
   if (!leftEntry || !rightEntry) return null;
+
+  const handleAddToBiopsyQueue = async () => {
+    if (addingToBiopsy) return;
+    setAddingToBiopsy(true);
+    try {
+      const target = rightEntry;
+      await updateLesion(target.visit.visit_id, { ...target.lesion, action: 'biopsy_scheduled' });
+    } finally {
+      setAddingToBiopsy(false);
+    }
+  };
+
+  const handleExportComparisonPDF = () => {
+    if (exportingPDF) return;
+    setExportingPDF(true);
+    try {
+      const doc = new jsPDF();
+      const pageW = doc.internal.pageSize.getWidth();
+      let y = 20;
+
+      doc.setFontSize(16);
+      doc.setTextColor(15, 23, 42);
+      doc.text('Lesion Comparison Report', pageW / 2, y, { align: 'center' });
+      y += 10;
+
+      doc.setFontSize(10);
+      doc.setTextColor(71, 85, 105);
+      doc.text(`Region: ${lesion.body_region.replace(/_/g, ' ')}`, 20, y);
+      y += 6;
+      doc.text(`Generated: ${format(new Date(), 'MMMM d, yyyy')}`, 20, y);
+      y += 10;
+
+      doc.setFontSize(11);
+      doc.setTextColor(15, 23, 42);
+      doc.text('Visit Timeline', 20, y);
+      y += 6;
+
+      allVisitLesions.forEach(({ visit, lesion: vl }, i) => {
+        doc.setFontSize(9);
+        doc.setTextColor(71, 85, 105);
+        doc.text(
+          `${i + 1}. ${format(parseISO(visit.visit_date), 'MMM d, yyyy')} — ` +
+          `${vl.size_mm ? vl.size_mm + 'mm' : 'size N/A'} · ` +
+          `${vl.color?.replace('_', ' ') ?? 'color N/A'} · ` +
+          `${vl.action.replace(/_/g, ' ')}`,
+          20, y
+        );
+        y += 6;
+        if (y > 260) { doc.addPage(); y = 20; }
+      });
+
+      doc.save(`lesion-comparison-${lesion.body_region}-${format(new Date(), 'yyyy-MM-dd')}.pdf`);
+    } finally {
+      setExportingPDF(false);
+    }
+  };
 
   return (
     <div className="fixed inset-0 bg-slate-950 z-50 flex flex-col fade-in">
@@ -348,7 +435,12 @@ export function PhotoComparison({ lesion, allVisitLesions, onClose }: PhotoCompa
               />
             )}
             {mode === 'overlay' && (
-              <OverlayView opacity={overlayOpacity} zoom={zoom} />
+              <OverlayView
+                left={{ ...leftEntry, photoIdx: 0 }}
+                right={{ ...rightEntry, photoIdx: 0 }}
+                opacity={overlayOpacity}
+                zoom={zoom}
+              />
             )}
             {mode === 'grid' && (
               <GridView visits={allVisitLesions} />
@@ -455,11 +547,19 @@ export function PhotoComparison({ lesion, allVisitLesions, onClose }: PhotoCompa
 
           {/* Provider actions */}
           <div className="p-4 border-t border-slate-800">
-            <button className="w-full bg-teal-600 hover:bg-teal-700 text-white font-medium py-2.5 rounded-xl text-sm transition-colors mb-2">
-              Add to Biopsy Queue
+            <button
+              onClick={handleAddToBiopsyQueue}
+              disabled={addingToBiopsy || rightEntry.lesion.action === 'biopsy_scheduled'}
+              className="w-full bg-teal-600 hover:bg-teal-700 disabled:opacity-60 text-white font-medium py-2.5 rounded-xl text-sm transition-colors mb-2"
+            >
+              {addingToBiopsy ? 'Adding...' : rightEntry.lesion.action === 'biopsy_scheduled' ? 'In Biopsy Queue' : 'Add to Biopsy Queue'}
             </button>
-            <button className="w-full bg-slate-800 hover:bg-slate-700 text-slate-300 font-medium py-2.5 rounded-xl text-sm transition-colors">
-              Export Comparison PDF
+            <button
+              onClick={handleExportComparisonPDF}
+              disabled={exportingPDF}
+              className="w-full bg-slate-800 hover:bg-slate-700 disabled:opacity-60 text-slate-300 font-medium py-2.5 rounded-xl text-sm transition-colors"
+            >
+              {exportingPDF ? 'Generating...' : 'Export Comparison PDF'}
             </button>
           </div>
         </div>

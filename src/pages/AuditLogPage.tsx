@@ -1,9 +1,12 @@
-import { useState } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Shield, Download, Search, Filter, Eye, Plus, RefreshCw, LogIn, LogOut, Edit, Trash, FileDown } from 'lucide-react';
 import { AUDIT_LOG } from '../data/syntheticData';
 import { AuditLogEntry } from '../types';
 import { format, parseISO } from 'date-fns';
 import clsx from 'clsx';
+import { auditLogger } from '../services/auditLogger';
+import { api } from '../services/api';
+import { config } from '../config';
 
 const actionIcons: Record<string, React.ReactNode> = {
   create: <Plus size={12} />,
@@ -38,11 +41,35 @@ const roleLabels: Record<string, string> = {
 };
 
 export function AuditLogPage() {
+  const [entries, setEntries] = useState<AuditLogEntry[]>([]);
   const [search, setSearch] = useState('');
   const [filterAction, setFilterAction] = useState<string>('all');
   const [filterRole, setFilterRole] = useState<string>('all');
+  const [loading, setLoading] = useState(true);
 
-  const filtered = AUDIT_LOG.filter((entry) => {
+  const loadEntries = async () => {
+    setLoading(true);
+    try {
+      if (!config.isDemo) {
+        // Production: fetch from backend (admin-only route)
+        const result = await api.get<{ entries: AuditLogEntry[] }>('/audit-logs?limit=200');
+        const live = result.entries ?? [];
+        setEntries(live.length > 0 ? live : AUDIT_LOG);
+      } else {
+        // Demo: read real IndexedDB logs accumulated this session, seed with AUDIT_LOG if empty
+        const local = await auditLogger.getRecentEntries(200);
+        setEntries(local.length > 0 ? local : AUDIT_LOG);
+      }
+    } catch {
+      setEntries(AUDIT_LOG);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => { loadEntries(); }, []);
+
+  const filtered = useMemo(() => entries.filter((entry) => {
     const matchSearch = search === '' || [
       entry.user_name, entry.details, entry.resource_type, entry.resource_id
     ].some((s) => s.toLowerCase().includes(search.toLowerCase()));
@@ -51,7 +78,7 @@ export function AuditLogPage() {
     const matchRole = filterRole === 'all' || entry.user_role === filterRole;
 
     return matchSearch && matchAction && matchRole;
-  });
+  }), [entries, search, filterAction, filterRole]);
 
   return (
     <div className="p-6 max-w-7xl mx-auto fade-in">
@@ -67,8 +94,8 @@ export function AuditLogPage() {
           </p>
         </div>
         <div className="flex gap-2">
-          <button className="btn-secondary text-sm">
-            <RefreshCw size={14} />
+          <button className="btn-secondary text-sm" onClick={loadEntries} disabled={loading}>
+            <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
             Refresh
           </button>
           <button className="btn-primary text-sm">
@@ -81,10 +108,10 @@ export function AuditLogPage() {
       {/* Stats */}
       <div className="grid grid-cols-4 gap-4 mb-5">
         {[
-          { label: 'Total Events (Today)', value: AUDIT_LOG.length, color: 'text-teal-600 bg-teal-50' },
-          { label: 'PHI Access Events', value: AUDIT_LOG.filter(e => e.action_type === 'read').length, color: 'text-blue-600 bg-blue-50' },
-          { label: 'Data Modifications', value: AUDIT_LOG.filter(e => ['create','update','delete'].includes(e.action_type)).length, color: 'text-amber-600 bg-amber-50' },
-          { label: 'Exports', value: AUDIT_LOG.filter(e => e.action_type === 'export').length, color: 'text-violet-600 bg-violet-50' },
+          { label: 'Total Events (Today)', value: entries.length, color: 'text-teal-600 bg-teal-50' },
+          { label: 'PHI Access Events', value: entries.filter(e => e.action_type === 'read').length, color: 'text-blue-600 bg-blue-50' },
+          { label: 'Data Modifications', value: entries.filter(e => ['create','update','delete'].includes(e.action_type)).length, color: 'text-amber-600 bg-amber-50' },
+          { label: 'Exports', value: entries.filter(e => e.action_type === 'export').length, color: 'text-violet-600 bg-violet-50' },
         ].map((stat) => (
           <div key={stat.label} className="card p-4">
             <div className={`text-2xl font-bold ${stat.color.split(' ')[0]}`}>{stat.value}</div>

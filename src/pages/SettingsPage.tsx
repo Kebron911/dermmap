@@ -1,6 +1,107 @@
-import { Settings, Bell, Shield, Smartphone, Palette, Camera, Database } from 'lucide-react';
+import { useState, useEffect, useCallback } from 'react';
+import { Settings, Bell, Shield, Palette, Camera, Database, CheckCircle, AlertCircle } from 'lucide-react';
+import { api } from '../services/api';
+
+const SKIN_TONES = ['#FDDCB5', '#F5C9A0', '#D4A574', '#A0714F', '#7B4F2E', '#3D1A00'];
+
+interface ClinicSettings {
+  clinic_name: string;
+  logo_url: string;
+  show_clinic_name_on_maps: boolean;
+  default_body_view: 'anterior' | 'posterior';
+  skin_tone: string;
+  photo_auto_capture: boolean;
+  photo_ruler_overlay: boolean;
+  photo_dermoscopy_detection: boolean;
+  photo_strip_exif: boolean;
+  photo_require_per_lesion: boolean;
+  notif_pending_review: boolean;
+  notif_biopsy_result: boolean;
+  notif_schedule_sync: boolean;
+  notif_session_timeout: boolean;
+  mobile_timeout_minutes: number;
+  web_timeout_minutes: number;
+}
+
+const DEFAULTS: ClinicSettings = {
+  clinic_name: '',
+  logo_url: '',
+  show_clinic_name_on_maps: true,
+  default_body_view: 'anterior',
+  skin_tone: '#F5C9A0',
+  photo_auto_capture: false,
+  photo_ruler_overlay: true,
+  photo_dermoscopy_detection: true,
+  photo_strip_exif: true,
+  photo_require_per_lesion: false,
+  notif_pending_review: true,
+  notif_biopsy_result: true,
+  notif_schedule_sync: false,
+  notif_session_timeout: true,
+  mobile_timeout_minutes: 5,
+  web_timeout_minutes: 15,
+};
+
+function Toggle({ on, onChange }: { on: boolean; onChange: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onChange}
+      className={`w-10 h-6 rounded-full relative transition-colors focus:outline-none focus:ring-2 focus:ring-teal-400 focus:ring-offset-1 ${on ? 'bg-teal-600' : 'bg-slate-300'}`}
+      aria-pressed={on}
+    >
+      <div className={`absolute top-1 w-4 h-4 bg-white rounded-full shadow transition-all ${on ? 'right-1' : 'left-1'}`} />
+    </button>
+  );
+}
 
 export function SettingsPage() {
+  const [settings, setSettings] = useState<ClinicSettings>(DEFAULTS);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [saveStatus, setSaveStatus] = useState<'idle' | 'saved' | 'error'>('idle');
+
+  useEffect(() => {
+    api.get<ClinicSettings>('/api/settings')
+      .then((data) => setSettings({ ...DEFAULTS, ...data }))
+      .catch(() => { /* use defaults if API unavailable */ })
+      .finally(() => setLoading(false));
+  }, []);
+
+  const set = useCallback(<K extends keyof ClinicSettings>(key: K, value: ClinicSettings[K]) => {
+    setSettings((prev) => ({ ...prev, [key]: value }));
+    setSaveStatus('idle');
+  }, []);
+
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      await api.put('/api/settings', settings);
+      setSaveStatus('saved');
+      setTimeout(() => setSaveStatus('idle'), 3000);
+    } catch {
+      setSaveStatus('error');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleReset = () => {
+    setSettings(DEFAULTS);
+    setSaveStatus('idle');
+  };
+
+  if (loading) {
+    return (
+      <div className="p-6 max-w-3xl mx-auto">
+        <div className="flex items-center gap-2 text-slate-400">
+          <div className="w-4 h-4 border-2 border-teal-400 border-t-transparent rounded-full animate-spin" />
+          Loading settings…
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="p-6 max-w-3xl mx-auto fade-in">
       <div className="mb-6">
@@ -21,17 +122,25 @@ export function SettingsPage() {
           <div className="space-y-4">
             <div>
               <label className="label">Clinic Name</label>
-              <input className="input" defaultValue="Riverside Dermatology Associates" />
+              <input
+                className="input"
+                value={settings.clinic_name}
+                onChange={(e) => set('clinic_name', e.target.value)}
+                placeholder="Your clinic name"
+              />
             </div>
             <div>
               <label className="label">PDF Header / Logo URL</label>
-              <input className="input" placeholder="https://yourclinic.com/logo.png" />
+              <input
+                className="input"
+                value={settings.logo_url}
+                onChange={(e) => set('logo_url', e.target.value)}
+                placeholder="https://yourclinic.com/logo.png"
+              />
             </div>
             <div className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
               <span className="text-sm text-slate-700">Show clinic name on body maps</span>
-              <div className="w-10 h-6 bg-teal-600 rounded-full relative cursor-pointer">
-                <div className="absolute right-1 top-1 w-4 h-4 bg-white rounded-full shadow" />
-              </div>
+              <Toggle on={settings.show_clinic_name_on_maps} onChange={() => set('show_clinic_name_on_maps', !settings.show_clinic_name_on_maps)} />
             </div>
           </div>
         </div>
@@ -45,19 +154,25 @@ export function SettingsPage() {
           <div className="space-y-3">
             <div>
               <label className="label">Default Opening View</label>
-              <select className="input">
-                <option>Anterior (Front)</option>
-                <option>Posterior (Back)</option>
+              <select
+                className="input"
+                value={settings.default_body_view}
+                onChange={(e) => set('default_body_view', e.target.value as ClinicSettings['default_body_view'])}
+              >
+                <option value="anterior">Anterior (Front)</option>
+                <option value="posterior">Posterior (Back)</option>
               </select>
             </div>
             <div>
               <label className="label">Default Skin Tone (Diagram)</label>
               <div className="flex gap-2">
-                {['#FDDCB5', '#F5C9A0', '#D4A574', '#A0714F', '#7B4F2E', '#3D1A00'].map((color) => (
+                {SKIN_TONES.map((color) => (
                   <button
                     key={color}
-                    className="w-8 h-8 rounded-full border-2 border-white shadow-sm hover:scale-110 transition-transform"
-                    style={{ backgroundColor: color }}
+                    type="button"
+                    onClick={() => set('skin_tone', color)}
+                    className="w-8 h-8 rounded-full border-2 hover:scale-110 transition-transform"
+                    style={{ backgroundColor: color, borderColor: settings.skin_tone === color ? '#0D9488' : 'white' }}
                   />
                 ))}
               </div>
@@ -72,23 +187,27 @@ export function SettingsPage() {
             <h3 className="font-semibold text-slate-900">Photo Capture Settings</h3>
           </div>
           <div className="space-y-3">
-            {[
-              { label: 'Auto-capture when stable', defaultOn: false },
-              { label: 'Show ruler overlay by default', defaultOn: true },
-              { label: 'Dermoscopy mode detection', defaultOn: true },
-              { label: 'Strip EXIF data from photos', defaultOn: true, required: true },
-              { label: 'Require at least 1 photo per lesion', defaultOn: false },
-            ].map((setting) => (
-              <div key={setting.label} className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
+            {([
+              { label: 'Auto-capture when stable', key: 'photo_auto_capture' as const },
+              { label: 'Show ruler overlay by default', key: 'photo_ruler_overlay' as const },
+              { label: 'Dermoscopy mode detection', key: 'photo_dermoscopy_detection' as const },
+              { label: 'Strip EXIF data from photos', key: 'photo_strip_exif' as const, required: true },
+              { label: 'Require at least 1 photo per lesion', key: 'photo_require_per_lesion' as const },
+            ] as const).map((item) => (
+              <div key={item.key} className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
                 <div>
-                  <span className="text-sm text-slate-700">{setting.label}</span>
-                  {setting.required && (
+                  <span className="text-sm text-slate-700">{item.label}</span>
+                  {'required' in item && item.required && (
                     <span className="ml-2 text-xs text-red-600 font-medium">(Required — HIPAA)</span>
                   )}
                 </div>
-                <div className={`w-10 h-6 rounded-full relative cursor-pointer transition-colors ${setting.defaultOn ? 'bg-teal-600' : 'bg-slate-300'}`}>
-                  <div className={`absolute top-1 w-4 h-4 bg-white rounded-full shadow transition-all ${setting.defaultOn ? 'right-1' : 'left-1'}`} />
-                </div>
+                <Toggle
+                  on={settings[item.key]}
+                  onChange={() => {
+                    if ('required' in item && item.required) return; // lock required toggles
+                    set(item.key, !settings[item.key]);
+                  }}
+                />
               </div>
             ))}
           </div>
@@ -101,17 +220,15 @@ export function SettingsPage() {
             <h3 className="font-semibold text-slate-900">Notifications</h3>
           </div>
           <div className="space-y-2">
-            {[
-              { label: 'New visit pending review', on: true },
-              { label: 'Biopsy result entered', on: true },
-              { label: 'Patient schedule synced', on: false },
-              { label: 'Session timeout warning', on: true },
-            ].map((notif) => (
-              <div key={notif.label} className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
-                <span className="text-sm text-slate-700">{notif.label}</span>
-                <div className={`w-10 h-6 rounded-full relative cursor-pointer transition-colors ${notif.on ? 'bg-teal-600' : 'bg-slate-300'}`}>
-                  <div className={`absolute top-1 w-4 h-4 bg-white rounded-full shadow transition-all ${notif.on ? 'right-1' : 'left-1'}`} />
-                </div>
+            {([
+              { label: 'New visit pending review', key: 'notif_pending_review' as const },
+              { label: 'Biopsy result entered', key: 'notif_biopsy_result' as const },
+              { label: 'Patient schedule synced', key: 'notif_schedule_sync' as const },
+              { label: 'Session timeout warning', key: 'notif_session_timeout' as const },
+            ] as const).map((item) => (
+              <div key={item.key} className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
+                <span className="text-sm text-slate-700">{item.label}</span>
+                <Toggle on={settings[item.key]} onChange={() => set(item.key, !settings[item.key])} />
               </div>
             ))}
           </div>
@@ -126,18 +243,26 @@ export function SettingsPage() {
           <div className="space-y-3">
             <div>
               <label className="label">Mobile Session Timeout</label>
-              <select className="input">
-                <option>5 minutes (HIPAA minimum)</option>
-                <option>3 minutes</option>
-                <option>10 minutes</option>
+              <select
+                className="input"
+                value={settings.mobile_timeout_minutes}
+                onChange={(e) => set('mobile_timeout_minutes', parseInt(e.target.value))}
+              >
+                <option value={3}>3 minutes</option>
+                <option value={5}>5 minutes (HIPAA minimum)</option>
+                <option value={10}>10 minutes</option>
               </select>
             </div>
             <div>
               <label className="label">Web Session Timeout</label>
-              <select className="input">
-                <option>15 minutes (HIPAA minimum)</option>
-                <option>10 minutes</option>
-                <option>30 minutes</option>
+              <select
+                className="input"
+                value={settings.web_timeout_minutes}
+                onChange={(e) => set('web_timeout_minutes', parseInt(e.target.value))}
+              >
+                <option value={10}>10 minutes</option>
+                <option value={15}>15 minutes (HIPAA minimum)</option>
+                <option value={30}>30 minutes</option>
               </select>
             </div>
             <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg text-xs text-amber-700">
@@ -148,10 +273,34 @@ export function SettingsPage() {
         </div>
 
         {/* Save */}
-        <div className="flex gap-3">
-          <button className="btn-secondary flex-1 justify-center">Reset to Defaults</button>
-          <button className="btn-primary flex-1 justify-center">Save Settings</button>
+        <div className="flex items-center gap-3">
+          <button type="button" onClick={handleReset} className="btn-secondary flex-1 justify-center">
+            Reset to Defaults
+          </button>
+          <button
+            type="button"
+            onClick={handleSave}
+            disabled={saving}
+            className="btn-primary flex-1 justify-center disabled:opacity-60"
+          >
+            {saving ? (
+              <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+            ) : 'Save Settings'}
+          </button>
         </div>
+
+        {saveStatus === 'saved' && (
+          <div className="flex items-center gap-2 text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-xl px-4 py-3 text-sm">
+            <CheckCircle size={16} />
+            Settings saved successfully.
+          </div>
+        )}
+        {saveStatus === 'error' && (
+          <div className="flex items-center gap-2 text-red-700 bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-sm">
+            <AlertCircle size={16} />
+            Failed to save settings. Please try again.
+          </div>
+        )}
       </div>
     </div>
   );

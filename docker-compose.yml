@@ -1,0 +1,75 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: dermmap-postgres
+    environment:
+      POSTGRES_DB: dermmap
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "54320:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - dermmap-network
+
+  # Backend API
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: dermmap-backend
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: dermmap
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      PORT: 3001
+      NODE_ENV: production
+      JWT_SECRET: your-secret-key-change-this-in-production-${RANDOM_SECRET:-default}
+      JWT_EXPIRES_IN: 24h
+      CORS_ORIGIN: http://localhost
+    ports:
+      - "3001:3001"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ./backend/src:/app/src
+    networks:
+      - dermmap-network
+    restart: unless-stopped
+    command: sh -c "npm run db:setup && npm run db:seed && node src/server.js"
+
+  # Frontend Application
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: dermmap-frontend
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    environment:
+      VITE_API_URL: http://localhost:3001/api
+    networks:
+      - dermmap-network
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+    driver: local
+
+networks:
+  dermmap-network:
+    driver: bridge

@@ -116,9 +116,9 @@ export function PatientSearchPage() {
     setCurrentPage('bodymap');
   };
 
-  const handleNewVisit = (patient: Patient) => {
+  const handleNewVisit = async (patient: Patient) => {
     setSelectedPatient(patient);
-    const visit = startNewVisit(patient);
+    const visit = await startNewVisit(patient);
     setCurrentVisit(visit);
     setCurrentPage('bodymap');
   };

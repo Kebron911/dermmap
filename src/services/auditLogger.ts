@@ -1,6 +1,7 @@
 import { config } from '../config';
 import { logger } from './logger';
 import { db } from './db';
+import { api } from './api';
 import type { AuditLogEntry, UserRole } from '../types';
 
 // ---------------------------------------------------------------------------
@@ -39,7 +40,20 @@ export const auditLogger = {
     try {
       await db.auditLog.put(entry);
     } catch (err) {
-      logger.error('Failed to write audit log', err);
+      logger.error('Failed to write audit log to IndexedDB', err);
+    }
+
+    // In production mode, also persist to the backend (best-effort, non-blocking)
+    if (!config.isDemo) {
+      api.post('/audit-logs', {
+        log_id: entry.log_id,
+        timestamp: entry.timestamp,
+        action_type: entry.action_type,
+        resource_type: entry.resource_type,
+        resource_id: entry.resource_id,
+        details: entry.details,
+        device_id: entry.device_id,
+      }).catch((err) => logger.warn('Audit sync to backend failed', err));
     }
 
     logger.debug('Audit', {
