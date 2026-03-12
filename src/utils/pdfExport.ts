@@ -2,6 +2,78 @@ import jsPDF from 'jspdf';
 import { Patient, Visit, Lesion } from '../types';
 import { format, parseISO, differenceInYears } from 'date-fns';
 
+// ---------------------------------------------------------------------------
+// resolvePhotoDataUris
+// Pre-fetches every photo in a visit from the authenticated API endpoint and
+// converts the binary response to a base-64 data URI so jsPDF can embed them.
+// Call this BEFORE exportVisitPDF; pass the result as `photoDataMap`.
+// Falls back gracefully — photos that time out or 404 are simply skipped.
+// ---------------------------------------------------------------------------
+export async function resolvePhotoDataUris(
+  visit: Visit,
+  token: string,
+  apiBase = '/api',
+): Promise<Map<string, string>> {
+  const map = new Map<string, string>();
+
+  const photoEntries = visit.lesions.flatMap((l) =>
+    l.photos.map((p) => ({ photo_id: p.photo_id, url: p.url })),
+  );
+
+  await Promise.allSettled(
+    photoEntries.map(async ({ photo_id, url }) => {
+      // If the photo already has an inline data URI (e.g. captured locally),
+      // use it directly without a network round-trip.
+      if (url?.startsWith('data:image')) {
+        map.set(photo_id, url);
+        return;
+      }
+
+      const apiUrl = `${apiBase}/photos/${photo_id}`;
+      const controller = new AbortController();
+      const tid = setTimeout(() => controller.abort(), 8000);
+      try {
+        const res = await fetch(apiUrl, {
+          headers: { Authorization: `Bearer ${token}` },
+          signal: controller.signal,
+        });
+        if (!res.ok) return;
+        const blob = await res.blob();
+        const dataUri = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(reader.result as string);
+          reader.onerror = reject;
+          reader.readAsDataURL(blob);
+        });
+        map.set(photo_id, dataUri);
+      } catch {
+        // Network error / timeout — photo will render as placeholder
+      } finally {
+        clearTimeout(tid);
+      }
+    }),
+  );
+
+  return map;
+}
+
+// ─── ICD-10 mapping for common lesion outcomes ───────────────────────────────
+const ICD10_MAP: Record<string, string> = {
+  malignant: 'C43.9 — Malignant melanoma, unspecified',
+  atypical:  'D22.9 — Melanocytic nevi, unspecified',
+  benign:    'D22.9 — Melanocytic nevi, unspecified',
+  na:        'L98.9 — Disorder of skin/subcutaneous tissue, unspecified',
+  pending:   'D48.5 — Neoplasm of uncertain behavior of skin',
+};
+
+function getICD10(lesion: Lesion): string {
+  if (lesion.biopsy_result === 'malignant') return ICD10_MAP.malignant;
+  if (lesion.biopsy_result === 'atypical')  return ICD10_MAP.atypical;
+  if (lesion.biopsy_result === 'benign')    return ICD10_MAP.benign;
+  if (lesion.biopsy_result === 'pending')   return ICD10_MAP.pending;
+  return ICD10_MAP.na;
+}
+
 // Color palette matching the clinical design
 const COLORS = {
   primary: [13, 148, 136] as [number, number, number],       // teal-600
@@ -67,6 +139,103 @@ function getLesionStatusLabel(lesion: Lesion): string {
   return 'MONITORING';
 }
 
+// ---------------------------------------------------------------------------
+// Programmatic body-map miniature — 2-column grid of lesion location badges
+// drawn with jsPDF primitives (no DOM / html2canvas required).
+// Returns the new y position after drawing.
+// ---------------------------------------------------------------------------
+function drawBodyMapSummary(doc: jsPDF, y: number, lesions: Lesion[]): number {
+  if (lesions.length === 0) return y;
+
+  y = addPageIfNeeded(doc, y, 40);
+
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(9);
+  setTextColor(doc, COLORS.dark);
+  doc.text('Body Location Summary', MARGIN, y);
+  setFill(doc, COLORS.primary);
+  doc.rect(MARGIN, y + 1.5, 46, 0.6, 'F');
+  y += 7;
+
+  // Mini body silhouette — simplified anterior outline
+  const bx = MARGIN;         // box left
+  const bw = 50;             // box width
+  const bh = 60;             // box height
+  const cx = bx + bw / 2;   // center x
+  const sy = y;              // box top
+
+  setFill(doc, [248, 250, 252]);
+  setDrawColor(doc, COLORS.border);
+  doc.setLineWidth(0.3);
+  doc.roundedRect(bx, sy, bw, bh, 2, 2, 'FD');
+
+  // SVG viewBox is 0-200 × 0-500; we scale into bw × bh
+  const scaleX = (bw - 8) / 200;
+  const scaleY = (bh - 8) / 500;
+  const ox = bx + 4;   // offset x (padding)
+  const oy = sy + 4;   // offset y (padding)
+
+  function mapX(svgX: number) { return ox + svgX * scaleX; }
+  function mapY(svgY: number) { return oy + svgY * scaleY; }
+
+  // Draw simplified body silhouette
+  setDrawColor(doc, [212, 184, 150]);
+  setFill(doc, [245, 230, 211]);
+  doc.setLineWidth(0.4);
+  // Head
+  doc.ellipse(mapX(100), mapY(44), 32 * scaleX, 38 * scaleY, 'FD');
+  // Torso
+  doc.roundedRect(mapX(48), mapY(106), 104 * scaleX, 134 * scaleY, 1, 1, 'FD');
+  // Left arm
+  doc.roundedRect(mapX(18), mapY(108), 32 * scaleX, 182 * scaleY, 1, 1, 'FD');
+  // Right arm
+  doc.roundedRect(mapX(150), mapY(108), 32 * scaleX, 182 * scaleY, 1, 1, 'FD');
+  // Left leg
+  doc.roundedRect(mapX(52), mapY(240), 42 * scaleX, 250 * scaleY, 1, 1, 'FD');
+  // Right leg
+  doc.roundedRect(mapX(106), mapY(240), 42 * scaleX, 250 * scaleY, 1, 1, 'FD');
+
+  // Plot lesion dots
+  lesions.forEach((l) => {
+    const lx = mapX(l.body_location_x * 2);  // coords are 0-100 in SVG 0-200
+    const ly = mapY(l.body_location_y * 5);  // coords are 0-100 in SVG 0-500
+    const col = getLesionStatusColor(l);
+    setFill(doc, COLORS.white);
+    doc.circle(lx, ly, 2.2, 'F');
+    setFill(doc, col);
+    doc.circle(lx, ly, 1.6, 'F');
+  });
+
+  // Lesion list on the right
+  const rx = bx + bw + 5;
+  const colW = CONTENT_W - bw - 5;
+  let ry = sy;
+
+  lesions.forEach((l, i) => {
+    if (ry + 8 > sy + bh) return;  // don't overflow the box height
+    const col = getLesionStatusColor(l);
+    setFill(doc, col);
+    doc.circle(rx + 2, ry + 3.5, 2, 'F');
+
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(7.5);
+    setTextColor(doc, COLORS.dark);
+    doc.text(
+      `${i + 1}. ${l.body_region.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())}`,
+      rx + 6, ry + 4.5,
+    );
+
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(6.5);
+    setTextColor(doc, COLORS.medium);
+    const viewLabel = l.body_view.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+    doc.text(viewLabel, rx + colW - 2, ry + 4.5, { align: 'right' });
+    ry += 7;
+  });
+
+  return y + Math.max(bh, lesions.length * 7) + 6;
+}
+
 function drawLesionPhotoBox(doc: jsPDF, x: number, y: number, w: number, h: number, lesion: Lesion, photoIdx: number) {
   const captureType = lesion.photos[photoIdx]?.capture_type || 'clinical';
   const isDerm = captureType === 'dermoscopic';
@@ -91,7 +260,12 @@ function drawLesionPhotoBox(doc: jsPDF, x: number, y: number, w: number, h: numb
   doc.text(isDerm ? 'DERM.' : 'CLIN.', x + w / 2, y + h - 1.5, { align: 'center' });
 }
 
-export async function exportVisitPDF(patient: Patient, visit: Visit, clinicName = 'Riverside Dermatology Associates'): Promise<void> {
+export async function exportVisitPDF(
+  patient: Patient,
+  visit: Visit,
+  clinicName = 'Riverside Dermatology Associates',
+  photoDataMap: Map<string, string> = new Map(),
+): Promise<void> {
   const doc = new jsPDF({
     orientation: 'portrait',
     unit: 'mm',
@@ -122,9 +296,12 @@ export async function exportVisitPDF(patient: Patient, visit: Visit, clinicName 
   doc.text(clinicName, MARGIN + 30, 14);
 
   // Document title
+  const visitTypeLbl = (visit as any).visit_type
+    ? String((visit as any).visit_type).replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())
+    : 'Dermatology Encounter';
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(9);
-  doc.text('DERMATOLOGY LESION DOCUMENTATION', PAGE_W - MARGIN, 9, { align: 'right' });
+  doc.text(`DERMATOLOGY LESION DOCUMENTATION — ${visitTypeLbl.toUpperCase()}`, PAGE_W - MARGIN, 9, { align: 'right' });
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(8);
   doc.text('CONFIDENTIAL — PROTECTED HEALTH INFORMATION', PAGE_W - MARGIN, 16, { align: 'right' });
@@ -156,7 +333,7 @@ export async function exportVisitPDF(patient: Patient, visit: Visit, clinicName 
     [`Fitzpatrick Type ${patient.skin_type} · ${patient.gender.charAt(0).toUpperCase() + patient.gender.slice(1)}`, col1, y + 30, false],
     [`Visit Date: ${visitDate}`, col2, y + 12, false],
     [`Provider: ${visit.provider_name}`, col2, y + 18, false],
-    [`Documented by: ${visit.ma_name}`, col2, y + 24, false],
+    [`Documented by: ${visit.ma_name || 'N/A'}`, col2, y + 24, false],
     [`Status: ${visit.status.replace(/_/g, ' ').toUpperCase()}`, col2, y + 30, false],
   ];
 
@@ -200,6 +377,13 @@ export async function exportVisitPDF(patient: Patient, visit: Visit, clinicName 
   });
 
   y += 20;
+
+  // ─── BODY MAP SUMMARY ───────────────────────────────────────────
+  if (visit.lesions.length > 0) {
+    y = drawBodyMapSummary(doc, y, visit.lesions);
+    y = drawDivider(doc, y);
+    y += 2;
+  }
 
   // ─── LESIONS ────────────────────────────────────────────────────
   doc.setFont('helvetica', 'bold');
@@ -255,7 +439,7 @@ export async function exportVisitPDF(patient: Patient, visit: Visit, clinicName 
 
     // Data grid
     const dataItems = [
-      { label: 'Size', value: lesion.size_mm ? `${lesion.size_mm} mm` : 'Not assessed' },
+      { label: 'Size', value: lesion.size_mm != null ? `${lesion.size_mm} mm` : 'Not assessed' },
       { label: 'Shape', value: lesion.shape || 'Not assessed' },
       { label: 'Color', value: lesion.color?.replace(/_/g, ' ') || 'Not assessed' },
       { label: 'Border', value: lesion.border.replace(/_/g, ' ') },
@@ -304,12 +488,13 @@ export async function exportVisitPDF(patient: Patient, visit: Visit, clinicName 
       lesion.photos.forEach((photo, pi) => {
         if (pi >= 5) return;
         const px = MARGIN + 25 + pi * (photoW + 3);
-        if (photo.url && photo.url.startsWith('data:image')) {
-          // Embed the actual captured image
+        // Prefer pre-fetched data URI; fall back to inline data URI on the photo object
+        const dataUri = photoDataMap.get(photo.photo_id) ??
+          (photo.url?.startsWith('data:image') ? photo.url : undefined);
+        if (dataUri) {
           try {
-            const fmt = photo.url.startsWith('data:image/png') ? 'PNG' : 'JPEG';
-            doc.addImage(photo.url, fmt, px, y, photoW, photoH);
-            // Caption bar
+            const fmt = dataUri.startsWith('data:image/png') ? 'PNG' : 'JPEG';
+            doc.addImage(dataUri, fmt, px, y, photoW, photoH);
             setFill(doc, [0, 0, 0]);
             doc.rect(px, y + photoH - 5, photoW, 5, 'F');
             doc.setTextColor(200, 200, 200);
@@ -348,6 +533,14 @@ export async function exportVisitPDF(patient: Patient, visit: Visit, clinicName 
 
       y += 18;
     }
+
+    // ICD-10 coding line
+    y = addPageIfNeeded(doc, y, 8);
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(6.5);
+    setTextColor(doc, COLORS.light);
+    doc.text(`ICD-10: ${getICD10(lesion)}`, MARGIN + 2, y + 4);
+    y += 7;
 
     // Biopsy result
     if (lesion.biopsy_result !== 'na' && lesion.biopsy_result !== 'pending') {

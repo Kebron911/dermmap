@@ -24,7 +24,7 @@ interface ClinicSettings {
 }
 
 const DEFAULTS: ClinicSettings = {
-  clinic_name: '',
+  clinic_name: 'Riverside Dermatology Associates',
   logo_url: '',
   show_clinic_name_on_maps: true,
   default_body_view: 'anterior',

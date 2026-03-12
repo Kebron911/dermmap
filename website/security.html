@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DermMap — Security & HIPAA Compliance</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar">
+        <div class="nav-container">
+            <div class="logo">
+                <span class="logo-text">DermMap</span>
+                <span class="pulse-dot"></span>
+            </div>
+
+            <button id="mobile-menu-btn" class="mobile-menu-btn" aria-label="Toggle menu">
+                <span></span>
+                <span></span>
+                <span></span>
+            </button>
+
+            <ul id="mobile-menu" class="nav-menu">
+                <li><a href="index.html" class="nav-link">Home</a></li>
+                <li><a href="features.html" class="nav-link">Features</a></li>
+                <li><a href="security.html" class="nav-link active">Security</a></li>
+                <li><a href="pricing.html" class="nav-link">Pricing</a></li>
+                <li><a href="demo.html" class="nav-link demo-btn">Demo</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section class="hero hero--dark">
+        <div class="hero-container">
+            <p class="section-label">Security & compliance</p>
+            <h1 class="hero-title">HIPAA compliance you can actually explain to your compliance officer.</h1>
+            <p class="hero-subtitle">DermMap's security architecture was designed from the first line of code as a clinical application — not adapted from a consumer product after the fact.</p>
+        </div>
+    </section>
+
+    <!-- Intro & Security Stats -->
+    <section class="intro-section">
+        <div class="container">
+            <p class="intro-text">Every access control, encryption layer, and audit trail in DermMap exists because of a specific HIPAA requirement or clinical data security principle. Here's how it maps.</p>
+
+            <div class="security-stats">
+                <div class="stat-box reveal" data-delay="0">
+                    <p class="stat-label">AES-256</p>
+                    <p class="stat-value">encryption</p>
+                </div>
+                <div class="stat-box reveal" data-delay="1">
+                    <p class="stat-label">TLS 1.3</p>
+                    <p class="stat-value">transit</p>
+                </div>
+                <div class="stat-box reveal" data-delay="2">
+                    <p class="stat-label">6-Year</p>
+                    <p class="stat-value">audit retention</p>
+                </div>
+                <div class="stat-box reveal" data-delay="3">
+                    <p class="stat-label">Zero</p>
+                    <p class="stat-value">camera roll exposure</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- HIPAA Compliance Table -->
+    <section class="compliance-table-section">
+        <div class="container">
+            <h2>Full HIPAA Compliance Implementation</h2>
+            <div class="table-wrapper">
+                <table class="compliance-table">
+                    <thead>
+                        <tr>
+                            <th>Requirement</th>
+                            <th>DermMap Implementation</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Encryption at rest</td>
+                            <td>AES-256 for all stored data — patient records, lesion data, photos, audit logs</td>
+                        </tr>
+                        <tr>
+                            <td>Encryption in transit</td>
+                            <td>TLS 1.3 (minimum TLS 1.2) for all API calls and data transfers</td>
+                        </tr>
+                        <tr>
+                            <td>Unique user identification</td>
+                            <td>Individual accounts required — shared logins are blocked</td>
+                        </tr>
+                        <tr>
+                            <td>Automatic logoff</td>
+                            <td>5-minute timeout on mobile, 15-minute timeout on web; PIN/biometric resume</td>
+                        </tr>
+                        <tr>
+                            <td>Audit controls</td>
+                            <td>Immutable audit log for every action — user, timestamp, action type, affected record</td>
+                        </tr>
+                        <tr>
+                            <td>Audit retention</td>
+                            <td>6 years minimum, per HIPAA requirements</td>
+                        </tr>
+                        <tr>
+                            <td>Access control (role-based)</td>
+                            <td>MA, Provider, Admin — minimum necessary access principle enforced</td>
+                        </tr>
+                        <tr>
+                            <td>Emergency access</td>
+                            <td>Break-glass access with mandatory justification logging</td>
+                        </tr>
+                        <tr>
+                            <td>PHI on device</td>
+                            <td>Photos stored only in encrypted app sandbox — never in camera roll</td>
+                        </tr>
+                        <tr>
+                            <td>EXIF data</td>
+                            <td>Stripped from all photos before storage (EXIF embeds GPS coordinates — PHI risk)</td>
+                        </tr>
+                        <tr>
+                            <td>Screen protection</td>
+                            <td>Screenshot and screen recording disabled within the app (iOS/Android)</td>
+                        </tr>
+                        <tr>
+                            <td>Remote wipe</td>
+                            <td>Enrolled device remote wipe capability for lost/stolen devices</td>
+                        </tr>
+                        <tr>
+                            <td>BAA</td>
+                            <td>Business Associate Agreement available with HIPAA-eligible cloud infrastructure</td>
+                        </tr>
+                        <tr>
+                            <td>Infrastructure</td>
+                            <td>Dedicated VPC, no public-facing databases, encrypted backups, point-in-time recovery</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </section>
+
+    <!-- Architecture Section -->
+    <section class="architecture-section">
+        <div class="container">
+            <h2>Built secure, not secured later.</h2>
+            <div class="architecture-cards">
+                <div class="arch-card reveal" data-delay="0">
+                    <h3>Data Layer</h3>
+                    <p>PHI never touches the application layer without encryption.</p>
+                </div>
+                <div class="arch-card reveal" data-delay="1">
+                    <h3>Access Layer</h3>
+                    <p>Role-based permissions enforced at the API level, not just the UI.</p>
+                </div>
+                <div class="arch-card reveal" data-delay="2">
+                    <h3>Audit Layer</h3>
+                    <p>Every state change creates an immutable record. No exceptions.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Compliance Officer Section -->
+    <section class="compliance-officer-section">
+        <div class="container">
+            <div class="compliance-box">
+                <h2>For your compliance officer's review.</h2>
+                <p>We're designed to make compliance review easy. BAA available on request. Full security documentation package available on request.</p>
+                <div class="compliance-ctas">
+                    <a href="demo.html" class="btn btn--secondary">Request BAA Information →</a>
+                    <a href="demo.html" class="btn btn--secondary">Schedule Security Review →</a>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Final CTA Section -->
+    <section class="final-cta-section">
+        <div class="container">
+            <h2>Confident in the security. Want to see the product?</h2>
+            <a href="demo.html" class="btn btn--light">Request a Demo →</a>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="footer-container">
+            <div class="footer-top">
+                <div class="footer-logo-section">
+                    <div class="footer-logo">
+                        <span class="footer-logo-text">DermMap</span>
+                        <span class="pulse-dot"></span>
+                    </div>
+                    <p class="footer-tagline">Lesion documentation that actually fits in an exam room.</p>
+                </div>
+                <nav class="footer-links">
+                    <ul>
+                        <li><a href="features.html">Features</a></li>
+                        <li><a href="security.html">Security</a></li>
+                        <li><a href="pricing.html">Pricing</a></li>
+                        <li><a href="demo.html">Demo</a></li>
+                    </ul>
+                </nav>
+            </div>
+            <div class="footer-bottom">
+                <div class="footer-badges">
+                    <span class="hipaa-badge">HIPAA Badge</span>
+                </div>
+                <p class="footer-copyright">&copy; 2025 DermMap. All rights reserved.</p>
+            </div>
+        </div>
+    </footer>
+
+    <script src="js/main.js"></script>
+</body>
+</html>

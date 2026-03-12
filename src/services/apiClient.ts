@@ -1,4 +1,6 @@
 import { Patient, Visit, Lesion, User } from '../types';
+import { config } from '../config';
+import { DEMO_USERS, SYNTHETIC_PATIENTS } from '../data/syntheticData';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
 
@@ -6,16 +8,16 @@ class APIClient {
   private token: string | null = null;
 
   constructor() {
-    // Load token from localStorage
-    this.token = localStorage.getItem('auth_token');
+    // Load token from sessionStorage (not localStorage — must not persist after tab close on shared terminals)
+    this.token = sessionStorage.getItem('auth_token');
   }
 
   setToken(token: string | null) {
     this.token = token;
     if (token) {
-      localStorage.setItem('auth_token', token);
+      sessionStorage.setItem('auth_token', token);
     } else {
-      localStorage.removeItem('auth_token');
+      sessionStorage.removeItem('auth_token');
     }
   }
 
@@ -47,6 +49,15 @@ class APIClient {
 
   // ---------- Authentication ----------
   async login(email: string, password: string): Promise<{ user: User; token: string }> {
+    if (config.isDemo) {
+      const demoUser = DEMO_USERS.find(u => u.email === email);
+      if (demoUser && password === 'demo123') {
+        const token = `demo-${demoUser.id}`;
+        this.setToken(token);
+        return { user: { id: demoUser.id, name: demoUser.name, role: demoUser.role, email: demoUser.email }, token };
+      }
+      throw new Error('Invalid demo credentials');
+    }
     const response = await this.request<{ user: User; token: string }>('/auth/login', {
       method: 'POST',
       body: JSON.stringify({ email, password }),
@@ -74,11 +85,21 @@ class APIClient {
 
   // ---------- Patients ----------
   async getPatients(search?: string, limit = 50, offset = 0): Promise<Patient[]> {
+    if (config.isDemo) {
+      const lower = search?.toLowerCase() ?? '';
+      const filtered = lower
+        ? SYNTHETIC_PATIENTS.filter(p =>
+            p.first_name.toLowerCase().includes(lower) ||
+            p.last_name.toLowerCase().includes(lower) ||
+            p.mrn.toLowerCase().includes(lower)
+          )
+        : SYNTHETIC_PATIENTS;
+      return filtered.slice(Number(offset), Number(offset) + Number(limit));
+    }
     const params = new URLSearchParams();
     if (search) params.append('search', search);
     params.append('limit', limit.toString());
     params.append('offset', offset.toString());
-    
     return this.request(`/patients?${params}`);
   }
 

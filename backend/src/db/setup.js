@@ -29,6 +29,7 @@ const setupDatabase = async () => {
     await client.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS credentials VARCHAR(100);`);
     await client.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS status VARCHAR(20) NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'pending', 'inactive'));`).catch(() => {});
     await client.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS last_login_at TIMESTAMP;`);
+    await client.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS location_id VARCHAR(100);`);
     
     // Patients table
     await client.query(`
@@ -66,6 +67,7 @@ const setupDatabase = async () => {
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
     `);
+    await client.query(`ALTER TABLE patients ADD COLUMN IF NOT EXISTS location_id VARCHAR(100);`);
     
     // Visits table
     await client.query(`
@@ -114,16 +116,27 @@ const setupDatabase = async () => {
       );
     `);
     
-    // Photos table (BLOBs for image storage)
+    // Photos table — images stored in S3/cloud, only metadata + signed-URL key here.
+    // Storing BLOBs in Postgres (BYTEA) does not scale; cloud object storage is the
+    // correct pattern for clinical photo archives (S3, Azure Blob, GCS).
     await client.query(`
       CREATE TABLE IF NOT EXISTS photos (
         photo_id VARCHAR(100) PRIMARY KEY,
         lesion_id VARCHAR(100) REFERENCES lesions(lesion_id) ON DELETE CASCADE,
         visit_id VARCHAR(100) REFERENCES visits(visit_id) ON DELETE CASCADE,
-        photo_data BYTEA NOT NULL,
-        photo_type VARCHAR(20) NOT NULL,
+        -- S3/cloud storage key used to generate short-lived signed URLs at read time.
+        -- Format: photos/{clinic_id}/{patient_id}/{visit_id}/{photo_id}.{ext}
+        storage_key TEXT NOT NULL,
+        -- Bucket/container in the configured cloud provider (S3, Azure Blob, GCS).
+        storage_bucket TEXT NOT NULL DEFAULT 'dermmap-photos',
+        -- Cache the latest signed URL; refreshed by the API before expiry.
+        signed_url TEXT,
+        signed_url_expires_at TIMESTAMP,
+        capture_type VARCHAR(20) NOT NULL CHECK (capture_type IN ('clinical', 'dermoscopic', 'overview')),
         file_size INTEGER NOT NULL,
         mime_type VARCHAR(50) NOT NULL,
+        width_px INTEGER,
+        height_px INTEGER,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         created_by VARCHAR(100) NOT NULL
       );
@@ -160,6 +173,52 @@ const setupDatabase = async () => {
       );
     `);
     
+    // Migration: remove BYTEA column from existing installs and add S3 columns.
+    // Safe to run repeatedly — each step is a no-op if already applied.
+    await client.query(`ALTER TABLE photos ADD COLUMN IF NOT EXISTS storage_key TEXT;`).catch(() => {});
+    await client.query(`ALTER TABLE photos ADD COLUMN IF NOT EXISTS storage_bucket TEXT DEFAULT 'dermmap-photos';`).catch(() => {});
+    await client.query(`ALTER TABLE photos ADD COLUMN IF NOT EXISTS signed_url TEXT;`).catch(() => {});
+    await client.query(`ALTER TABLE photos ADD COLUMN IF NOT EXISTS signed_url_expires_at TIMESTAMP;`).catch(() => {});
+    await client.query(`ALTER TABLE photos ADD COLUMN IF NOT EXISTS capture_type VARCHAR(20);`).catch(() => {});
+    await client.query(`ALTER TABLE photos ADD COLUMN IF NOT EXISTS width_px INTEGER;`).catch(() => {});
+    await client.query(`ALTER TABLE photos ADD COLUMN IF NOT EXISTS height_px INTEGER;`).catch(() => {});
+    // Drop the BLOB column if it still exists (frees potentially large disk usage).
+    await client.query(`ALTER TABLE photos DROP COLUMN IF EXISTS photo_data;`).catch(() => {});
+
+    // Clinic locations table — one row per practice/location
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS clinic_locations (
+        location_id    VARCHAR(100) PRIMARY KEY,
+        name           VARCHAR(255) NOT NULL,
+        npi            VARCHAR(20)  NOT NULL,
+        address_street VARCHAR(255),
+        address_city   VARCHAR(100),
+        address_state  VARCHAR(50),
+        address_zip    VARCHAR(20),
+        phone          VARCHAR(30),
+        email          VARCHAR(255),
+        status         VARCHAR(20) NOT NULL DEFAULT 'pending'
+                           CHECK (status IN ('pending', 'active', 'suspended')),
+        created_at     TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        activated_at   TIMESTAMP
+      );
+    `);
+
+    // BAA records — immutable log of every signed Business Associate Agreement
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS baa_records (
+        id              UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+        location_id     VARCHAR(100) REFERENCES clinic_locations(location_id),
+        admin_email     VARCHAR(255) NOT NULL,
+        admin_name      VARCHAR(255) NOT NULL,
+        agreement_version VARCHAR(10) NOT NULL DEFAULT '1.0',
+        ip_address      VARCHAR(45),
+        user_agent      TEXT,
+        signed_at       TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        docusign_envelope_id VARCHAR(100)
+      );
+    `);
+
     // Create indexes for performance
     await client.query(`
       CREATE INDEX IF NOT EXISTS idx_visits_patient_id ON visits(patient_id);

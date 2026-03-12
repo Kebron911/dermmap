@@ -37,7 +37,7 @@ export function ReportBuilderPage() {
   const { patients } = useAppStore();
 
   const [config, setConfig] = useState<ReportConfig>({
-    title: 'Practice Performance Report',
+    title: 'Riverside Dermatology Associates — Practice Performance Report',
     dateRange: {
       from: new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
       to: new Date().toISOString().split('T')[0],
@@ -61,7 +61,7 @@ export function ReportBuilderPage() {
     if (config.groupBy === 'provider') {
       const map = new Map<string, Record<string, number>>();
       patients.forEach(p => {
-        p.visits.forEach(v => {
+        (p.visits ?? []).forEach(v => {
           if (!map.has(v.provider_name)) {
             map.set(v.provider_name, {
               visits: 0, lesions: 0, photos: 0, biopsies: 0, malignancies: 0, avg_doc_time: 0,
@@ -69,9 +69,9 @@ export function ReportBuilderPage() {
           }
           const row = map.get(v.provider_name)!;
           row.visits++;
-          row.lesions += v.lesions.length;
-          row.photos += v.lesions.reduce((s, l) => s + l.photos.length, 0);
-          v.lesions.forEach(l => {
+          row.lesions += (v.lesions ?? []).length;
+          row.photos += (v.lesions ?? []).reduce((s, l) => s + (l.photos ?? []).length, 0);
+          (v.lesions ?? []).forEach(l => {
             if (l.action === 'biopsy_performed') row.biopsies++;
             if (l.biopsy_result === 'malignant') row.malignancies++;
           });
@@ -84,16 +84,16 @@ export function ReportBuilderPage() {
     if (config.groupBy === 'month') {
       const map = new Map<string, Record<string, number>>();
       patients.forEach(p => {
-        p.visits.forEach(v => {
+        (p.visits ?? []).forEach(v => {
           const month = v.visit_date.slice(0, 7); // YYYY-MM
           if (!map.has(month)) {
             map.set(month, { visits: 0, lesions: 0, photos: 0, biopsies: 0, malignancies: 0, avg_doc_time: 0 });
           }
           const row = map.get(month)!;
           row.visits++;
-          row.lesions += v.lesions.length;
-          row.photos += v.lesions.reduce((s, l) => s + l.photos.length, 0);
-          v.lesions.forEach(l => {
+          row.lesions += (v.lesions ?? []).length;
+          row.photos += (v.lesions ?? []).reduce((s, l) => s + (l.photos ?? []).length, 0);
+          (v.lesions ?? []).forEach(l => {
             if (l.action === 'biopsy_performed') row.biopsies++;
             if (l.biopsy_result === 'malignant') row.malignancies++;
           });
@@ -113,11 +113,11 @@ export function ReportBuilderPage() {
         map.set(locationName, { visits: 0, lesions: 0, photos: 0, biopsies: 0, malignancies: 0, avg_doc_time: 0 });
       }
       const row = map.get(locationName)!;
-      p.visits.forEach(v => {
+      (p.visits ?? []).forEach(v => {
         row.visits++;
-        row.lesions += v.lesions.length;
-        row.photos += v.lesions.reduce((s, l) => s + l.photos.length, 0);
-        v.lesions.forEach(l => {
+        row.lesions += (v.lesions ?? []).length;
+        row.photos += (v.lesions ?? []).reduce((s, l) => s + (l.photos ?? []).length, 0);
+        (v.lesions ?? []).forEach(l => {
           if (l.action === 'biopsy_performed') row.biopsies++;
           if (l.biopsy_result === 'malignant') row.malignancies++;
         });

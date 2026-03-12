@@ -23,7 +23,7 @@ export function VisitQueuePage() {
   // Collect pending_review visits
   const pendingVisits: VisitWithPatient[] = [];
   patients.forEach((patient) => {
-    patient.visits.forEach((visit) => {
+    (patient.visits ?? []).forEach((visit) => {
       if (visit.status === 'pending_review') {
         pendingVisits.push({ visit, patient });
       }

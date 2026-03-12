@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Search, ChevronRight, Calendar, MapPin, AlertCircle } from 'lucide-react';
 import { useAppStore } from '../store/appStore';
 import { Patient } from '../types';
@@ -15,15 +15,15 @@ const skinTypeColors: Record<string, string> = {
 };
 
 function getAlertCount(patient: Patient): number {
-  return patient.visits.reduce((total, visit) =>
-    total + visit.lesions.filter((l) =>
+  return (patient.visits ?? []).reduce((total, visit) =>
+    total + (visit.lesions ?? []).filter((l) =>
       l.biopsy_result === 'malignant' || l.biopsy_result === 'atypical' || l.biopsy_result === 'pending'
     ).length, 0
   );
 }
 
 function getLesionCount(patient: Patient): number {
-  const uniqueLesions = new Set(patient.visits.flatMap((v) => v.lesions.map((l) => l.lesion_id)));
+  const uniqueLesions = new Set((patient.visits ?? []).flatMap((v) => (v.lesions ?? []).map((l) => l.lesion_id)));
   return uniqueLesions.size;
 }
 
@@ -31,8 +31,8 @@ function PatientCard({ patient, onClick }: { patient: Patient; onClick: () => vo
   const age = differenceInYears(new Date(), parseISO(patient.date_of_birth));
   const alertCount = getAlertCount(patient);
   const lesionCount = getLesionCount(patient);
-  const lastVisit = patient.visits.at(-1);
-  const pendingReview = patient.visits.some((v) => v.status === 'pending_review');
+  const lastVisit = (patient.visits ?? []).at(-1);
+  const pendingReview = (patient.visits ?? []).some((v) => v.status === 'pending_review');
 
   return (
     <button
@@ -78,7 +78,7 @@ function PatientCard({ patient, onClick }: { patient: Patient; onClick: () => vo
             </div>
             <div className="flex items-center gap-1 text-xs text-slate-500">
               <Calendar size={11} />
-              {patient.visits.length} visit{patient.visits.length !== 1 ? 's' : ''}
+              {(patient.visits ?? []).length} visit{(patient.visits ?? []).length !== 1 ? 's' : ''}
             </div>
             {lastVisit && (
               <div className="text-xs text-slate-400">
@@ -96,8 +96,12 @@ function PatientCard({ patient, onClick }: { patient: Patient; onClick: () => vo
 }
 
 export function PatientSearchPage() {
-  const { patients, setSelectedPatient, setCurrentPage, startNewVisit, setCurrentVisit, currentUser } = useAppStore();
+  const { patients: allPatients, setSelectedPatient, setCurrentPage, startNewVisit, setCurrentVisit, currentUser, selectedLocation } = useAppStore();
   const [query, setQuery] = useState('');
+
+  const patients = useMemo(() =>
+    selectedLocation ? allPatients.filter(p => p.location_id === selectedLocation) : allPatients,
+    [allPatients, selectedLocation]);
 
   const filtered = query.trim()
     ? patients.filter((p) => {
@@ -192,9 +196,9 @@ export function PatientSearchPage() {
               <h3 className="text-sm font-semibold text-slate-700 mb-3">Quick Filters</h3>
               <div className="space-y-2">
                 {[
-                  { label: 'Pending Review', count: patients.filter(p => p.visits.some(v => v.status === 'pending_review')).length, color: 'text-amber-600' },
+                  { label: 'Pending Review', count: patients.filter(p => (p.visits ?? []).some(v => v.status === 'pending_review')).length, color: 'text-amber-600' },
                   { label: 'Active Alerts', count: patients.filter(p => getAlertCount(p) > 0).length, color: 'text-red-600' },
-                  { label: 'New Patients', count: patients.filter(p => p.visits.length <= 1).length, color: 'text-blue-600' },
+                  { label: 'New Patients', count: patients.filter(p => (p.visits ?? []).length <= 1).length, color: 'text-blue-600' },
                 ].map((filter) => (
                   <button key={filter.label} className="w-full flex items-center justify-between px-3 py-2 rounded-lg hover:bg-slate-50 transition-colors">
                     <span className="text-xs text-slate-600">{filter.label}</span>

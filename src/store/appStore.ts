@@ -3,6 +3,23 @@ import { User, Patient, Visit, Lesion, BodyView, VisitStatus } from '../types';
 import { apiClient } from '../services/apiClient';
 import indexedDB from '../services/indexedDB';
 import syncService from '../services/syncService';
+import type { SyncConflict } from '../components/sync/ConflictResolutionModal';
+
+// Only log in dev — keeps the console clean during demos.
+const isDev = import.meta.env.DEV;
+const devError = (...args: unknown[]) => { if (isDev) console.error(...args); };
+
+// Holds the React Router navigate function once the app mounts.
+// Using a module-level ref avoids a circular store dependency.
+let _navigate: ((path: string) => void) | null = null;
+
+/**
+ * Called once from App.tsx after useNavigate() is available.
+ * All setCurrentPage calls then drive the browser URL.
+ */
+export function registerNavigate(fn: (path: string) => void) {
+  _navigate = fn;
+}
 
 interface AppState {
   // Auth
@@ -40,13 +57,23 @@ interface AppState {
   // Sync status
   ehrSynced: boolean;
 
+  // Sync conflict resolution
+  syncConflicts: SyncConflict[];
+  setSyncConflicts: (conflicts: SyncConflict[]) => void;
+  clearSyncConflicts: () => void;
+
   // Visit Management
   completeVisit: (visitId: string, status: VisitStatus, providerAttestation?: string) => Promise<void>;
   deleteVisit: (visitId: string) => Promise<void>;
 
-  // Navigation
+  // Location filter
+  selectedLocation: string | null;
+  setSelectedLocation: (locationId: string | null) => void;
+
+  // Navigation — setCurrentPage also navigates to /<page> via React Router.
+  // Pass fromUrl=true when called from NavigationSyncer to avoid a navigate loop.
   currentPage: string;
-  setCurrentPage: (page: string) => void;
+  setCurrentPage: (page: string, fromUrl?: boolean) => void;
 
   // Demo timer
   docStartTime: number | null;
@@ -71,13 +98,17 @@ export const useAppStore = create<AppState>((set, get) => ({
       
       return true;
     } catch (error) {
-      console.error('Login failed:', error);
+      devError('Login failed:', error);
       return false;
     }
   },
   
   logout: () => {
     apiClient.logout();
+    // Stop the sync service before clearing state to prevent post-logout sync with stale credentials
+    syncService.destroy();
+    // Wipe all cached PHI from IndexedDB so it doesn't persist across sessions
+    indexedDB.clearAll().catch(() => {});
     set({
       currentUser: null,
       token: null,
@@ -91,20 +122,35 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
 
   patients: [],
-  
+
   ehrSynced: false,
 
+  syncConflicts: [],
+  setSyncConflicts: (conflicts) => set({ syncConflicts: conflicts }),
+  clearSyncConflicts: () => set({ syncConflicts: [] }),
+
+  selectedLocation: null,
+  setSelectedLocation: (locationId) => set({ selectedLocation: locationId }),
+
   loadPatients: async () => {
+    const LOCATION_IDS = ['loc-001', 'loc-002', 'loc-003'];
+    // Only assign synthetic location IDs in demo mode.
+    // In production the location_id comes from the API payload.
+    const assignLocations = (pts: Patient[]) =>
+      import.meta.env.VITE_AUTH_PROVIDER === 'demo'
+        ? pts.map((p, i) => ({ ...p, location_id: p.location_id ?? LOCATION_IDS[i % LOCATION_IDS.length] }))
+        : pts;
+
     try {
-      const patients = await apiClient.getPatients();
+      const patients = assignLocations(await apiClient.getPatients());
       set({ patients, ehrSynced: true });
       
       // Cache in IndexedDB for offline access
       await indexedDB.savePatients(patients);
     } catch (error) {
-      console.error('Failed to load patients:', error);
+      devError('Failed to load patients:', error);
       // Try to load from cache if API fails
-      const cachedPatients = await indexedDB.getPatients();
+      const cachedPatients = assignLocations(await indexedDB.getPatients());
       if (cachedPatients.length > 0) {
         set({ patients: cachedPatients });
       }
@@ -150,7 +196,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       
       return newVisit;
     } catch (error) {
-      console.error('Failed to create visit:', error);
+      devError('Failed to create visit:', error);
       
       // Fallback: create locally and queue for sync
       const newVisit: Visit = {
@@ -231,7 +277,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       
       await indexedDB.saveLesions([createdLesion]);
     } catch (error) {
-      console.error('Failed to add lesion:', error);
+      devError('Failed to add lesion:', error);
       
       // Fallback: add locally and queue for sync
       set((state) => {
@@ -288,7 +334,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       
       await indexedDB.saveLesions([lesion]);
     } catch (error) {
-      console.error('Failed to update lesion:', error);
+      devError('Failed to update lesion:', error);
       
       // Fallback: update locally and queue for sync
       set((state) => {
@@ -331,7 +377,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       
       // Note: IndexedDB deletion not needed for offline-first architecture
     } catch (error) {
-      console.error('Failed to delete lesion:', error);
+      devError('Failed to delete lesion:', error);
       
       // Fallback: delete locally and queue for sync
       set((state) => {
@@ -380,7 +426,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       const visit = get().currentVisit;
       if (visit) await indexedDB.saveVisits([visit]);
     } catch (error) {
-      console.error('Failed to complete visit:', error);
+      devError('Failed to complete visit:', error);
       
       // Fallback: update locally and queue for sync
       set((state) => {
@@ -422,7 +468,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       
       // Note: IndexedDB deletion not needed for offline-first architecture
     } catch (error) {
-      console.error('Failed to delete visit:', error);
+      devError('Failed to delete visit:', error);
       
       // Fallback: delete locally and queue for sync
       set((state) => {
@@ -442,7 +488,13 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
 
   currentPage: 'login',
-  setCurrentPage: (page) => set({ currentPage: page }),
+  setCurrentPage: (page, fromUrl = false) => {
+    set({ currentPage: page });
+    // Drive the browser URL unless this call originated from the URL itself
+    if (!fromUrl && _navigate) {
+      _navigate(`/${page}`);
+    }
+  },
 
   docStartTime: null,
   startDocTimer: () => set({ docStartTime: Date.now() }),

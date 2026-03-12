@@ -4,6 +4,10 @@ dist-ssr
 *.local
 .env
 .env.*
+!.env.example
+
+# Build artifacts
+coverage/
 
 # Docker
 .env.docker

@@ -147,31 +147,34 @@ const PosteriorBody = () => (
   </g>
 );
 
+type RegionView = 'anterior' | 'posterior';
+
 // Hit area regions for the body map (for click detection)
-const bodyRegions = [
-  { id: 'scalp', label: 'Scalp', path: 'M72 6 Q100 0 128 6 Q136 20 132 40 Q120 55 100 57 Q80 55 68 40 Q64 20 72 6 Z' },
-  { id: 'face', label: 'Face', path: 'M80 38 Q100 58 120 38 Q128 50 128 65 Q120 80 100 82 Q80 80 72 65 Q72 50 80 38 Z' },
-  { id: 'neck', label: 'Neck', path: 'M86 80 L114 80 L112 108 L88 108 Z' },
-  { id: 'left_shoulder', label: 'Left Shoulder', path: 'M48 108 L48 135 L30 130 Q24 120 24 108 Z' },
-  { id: 'right_shoulder', label: 'Right Shoulder', path: 'M152 108 L152 135 L170 130 Q176 120 176 108 Z' },
-  { id: 'chest', label: 'Chest', path: 'M58 108 L142 108 L148 170 L52 170 Z' },
-  { id: 'abdomen', label: 'Abdomen', path: 'M52 170 L148 170 L145 240 L55 240 Z' },
-  { id: 'upper_back', label: 'Upper Back', path: 'M58 108 L142 108 L148 170 L52 170 Z' },
-  { id: 'lower_back', label: 'Lower Back', path: 'M52 170 L148 170 L145 240 L55 240 Z' },
-  { id: 'left_upper_arm', label: 'Left Upper Arm', path: 'M28 130 L54 130 L52 200 L24 200 Z' },
-  { id: 'right_upper_arm', label: 'Right Upper Arm', path: 'M146 130 L172 130 L176 200 L148 200 Z' },
-  { id: 'left_forearm', label: 'Left Forearm', path: 'M20 202 L40 202 L40 285 L18 285 Z' },
-  { id: 'right_forearm', label: 'Right Forearm', path: 'M160 202 L182 202 L184 285 L162 285 Z' },
-  { id: 'left_hand', label: 'Left Hand', path: 'M16 286 Q30 316 42 286 Z' },
-  { id: 'right_hand', label: 'Right Hand', path: 'M158 286 Q172 316 184 286 Z' },
-  { id: 'left_hip', label: 'Left Hip', path: 'M55 240 L97 240 L96 290 L52 285 Z' },
-  { id: 'right_hip', label: 'Right Hip', path: 'M103 240 L145 240 L148 285 L104 290 Z' },
-  { id: 'left_thigh', label: 'Left Thigh', path: 'M52 285 L96 290 L92 380 L55 375 Z' },
-  { id: 'right_thigh', label: 'Right Thigh', path: 'M104 290 L148 285 L145 375 L108 380 Z' },
-  { id: 'left_lower_leg', label: 'Left Lower Leg', path: 'M55 380 L92 380 L88 470 L54 470 Z' },
-  { id: 'right_lower_leg', label: 'Right Lower Leg', path: 'M108 380 L145 380 L146 470 L112 470 Z' },
-  { id: 'left_foot', label: 'Left Foot', path: 'M44 468 L92 468 L92 492 L44 492 Z' },
-  { id: 'right_foot', label: 'Right Foot', path: 'M108 468 L156 468 L156 492 L108 492 Z' },
+// views: which body views this region belongs to
+const bodyRegions: { id: string; label: string; views: RegionView[]; path: string }[] = [
+  { id: 'scalp',           label: 'Scalp',            views: ['anterior', 'posterior'],                        path: 'M72 6 Q100 0 128 6 Q136 20 132 40 Q120 55 100 57 Q80 55 68 40 Q64 20 72 6 Z' },
+  { id: 'face',            label: 'Face',             views: ['anterior'],                        path: 'M80 38 Q100 58 120 38 Q128 50 128 65 Q120 80 100 82 Q80 80 72 65 Q72 50 80 38 Z' },
+  { id: 'neck',            label: 'Neck',             views: ['anterior', 'posterior'],                        path: 'M86 80 L114 80 L112 108 L88 108 Z' },
+  { id: 'left_shoulder',   label: 'Left Shoulder',    views: ['anterior', 'posterior'],                        path: 'M48 108 L48 135 L30 130 Q24 120 24 108 Z' },
+  { id: 'right_shoulder',  label: 'Right Shoulder',   views: ['anterior', 'posterior'],                        path: 'M152 108 L152 135 L170 130 Q176 120 176 108 Z' },
+  { id: 'chest',           label: 'Chest',            views: ['anterior'],                        path: 'M58 108 L142 108 L148 170 L52 170 Z' },
+  { id: 'abdomen',         label: 'Abdomen',          views: ['anterior'],                        path: 'M52 170 L148 170 L145 240 L55 240 Z' },
+  { id: 'upper_back',      label: 'Upper Back',       views: ['posterior'],                        path: 'M58 108 L142 108 L148 170 L52 170 Z' },
+  { id: 'lower_back',      label: 'Lower Back',       views: ['posterior'],                        path: 'M52 170 L148 170 L145 240 L55 240 Z' },
+  { id: 'left_upper_arm',  label: 'Left Upper Arm',   views: ['anterior', 'posterior'],                        path: 'M28 130 L54 130 L52 200 L24 200 Z' },
+  { id: 'right_upper_arm', label: 'Right Upper Arm',  views: ['anterior', 'posterior'],                        path: 'M146 130 L172 130 L176 200 L148 200 Z' },
+  { id: 'left_forearm',    label: 'Left Forearm',     views: ['anterior', 'posterior'],                        path: 'M20 202 L40 202 L40 285 L18 285 Z' },
+  { id: 'right_forearm',   label: 'Right Forearm',    views: ['anterior', 'posterior'],                        path: 'M160 202 L182 202 L184 285 L162 285 Z' },
+  { id: 'left_hand',       label: 'Left Hand',        views: ['anterior', 'posterior'],                        path: 'M16 286 Q30 316 42 286 Z' },
+  { id: 'right_hand',      label: 'Right Hand',       views: ['anterior', 'posterior'],                        path: 'M158 286 Q172 316 184 286 Z' },
+  { id: 'left_hip',        label: 'Left Hip',         views: ['anterior', 'posterior'],                        path: 'M55 240 L97 240 L96 290 L52 285 Z' },
+  { id: 'right_hip',       label: 'Right Hip',        views: ['anterior', 'posterior'],                        path: 'M103 240 L145 240 L148 285 L104 290 Z' },
+  { id: 'left_thigh',      label: 'Left Thigh',       views: ['anterior', 'posterior'],                        path: 'M52 285 L96 290 L92 380 L55 375 Z' },
+  { id: 'right_thigh',     label: 'Right Thigh',      views: ['anterior', 'posterior'],                        path: 'M104 290 L148 285 L145 375 L108 380 Z' },
+  { id: 'left_lower_leg',  label: 'Left Lower Leg',   views: ['anterior', 'posterior'],                        path: 'M55 380 L92 380 L88 470 L54 470 Z' },
+  { id: 'right_lower_leg', label: 'Right Lower Leg',  views: ['anterior', 'posterior'],                        path: 'M108 380 L145 380 L146 470 L112 470 Z' },
+  { id: 'left_foot',       label: 'Left Foot',        views: ['anterior', 'posterior'],                        path: 'M44 468 L92 468 L92 492 L44 492 Z' },
+  { id: 'right_foot',      label: 'Right Foot',       views: ['anterior', 'posterior'],                        path: 'M108 468 L156 468 L156 492 L108 492 Z' },
 ];
 
 function LesionMarkerDot({ lesion, onClick }: { lesion: Lesion; onClick: () => void }) {
@@ -212,6 +215,9 @@ export function BodyMapSVG({
   const viewBox = "0 0 200 510";
   const isPosterior = view === 'posterior';
 
+  // Regions valid for the current view
+  const currentViewRegions = bodyRegions.filter((r) => r.views.includes(view as RegionView));
+
   const handleSvgClick = (e: React.MouseEvent<SVGSVGElement>) => {
     if (!interactive || !onBodyClick) return;
     const svg = e.currentTarget;
@@ -221,8 +227,8 @@ export function BodyMapSVG({
     const x = (e.clientX - rect.left) * scaleX;
     const y = (e.clientY - rect.top) * scaleY;
 
-    // Find which region was clicked
-    const clickedRegion = bodyRegions.find((region) => {
+    // Only test regions valid for the current view
+    const clickedRegion = currentViewRegions.find((region) => {
       const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
       path.setAttribute('d', region.path);
       const pathElem = svg.appendChild(path);
@@ -234,8 +240,8 @@ export function BodyMapSVG({
     onBodyClick(Math.round(x), Math.round(y), clickedRegion?.id || 'unknown');
   };
 
-  // Filter lesions for current view
-  const visibleLesions = lesions.filter((l) => l.body_view === view || view === 'anterior');
+  // Show only lesions placed on the current view
+  const visibleLesions = lesions.filter((l) => l.body_view === view);
 
   return (
     <div className={clsx('relative flex justify-center', compact ? '' : 'w-full h-full')}>
@@ -258,8 +264,8 @@ export function BodyMapSVG({
         {/* Body silhouette */}
         {isPosterior ? <PosteriorBody /> : <AnteriorBody />}
 
-        {/* Interactive hit areas */}
-        {interactive && bodyRegions.map((region) => (
+        {/* Interactive hit areas — only for current view */}
+        {interactive && currentViewRegions.map((region) => (
           <path
             key={region.id}
             d={region.path}
@@ -286,7 +292,7 @@ export function BodyMapSVG({
         {/* Hover highlight */}
         {hoveredRegion && interactive && (
           <path
-            d={bodyRegions.find((r) => r.id === hoveredRegion)?.path || ''}
+            d={currentViewRegions.find((r) => r.id === hoveredRegion)?.path || ''}
             fill="rgba(20, 184, 166, 0.12)"
             stroke="rgba(20, 184, 166, 0.5)"
             strokeWidth="1"

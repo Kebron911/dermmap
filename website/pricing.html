@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DermMap — Pricing</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar">
+        <div class="nav-container">
+            <div class="logo">
+                <span class="logo-text">DermMap</span>
+                <span class="pulse-dot"></span>
+            </div>
+
+            <button id="mobile-menu-btn" class="mobile-menu-btn" aria-label="Toggle menu">
+                <span></span>
+                <span></span>
+                <span></span>
+            </button>
+
+            <ul id="mobile-menu" class="nav-menu">
+                <li><a href="index.html" class="nav-link">Home</a></li>
+                <li><a href="features.html" class="nav-link">Features</a></li>
+                <li><a href="security.html" class="nav-link">Security</a></li>
+                <li><a href="pricing.html" class="nav-link active">Pricing</a></li>
+                <li><a href="demo.html" class="nav-link demo-btn">Demo</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section class="hero hero--dark">
+        <div class="hero-container">
+            <p class="section-label">Pricing</p>
+            <h1 class="hero-title">Straightforward pricing based on your practice size.</h1>
+            <p class="hero-subtitle">No hidden fees. No per-patient charges. No surprise overages.</p>
+
+            <div class="billing-toggle-container">
+                <label class="billing-toggle">
+                    <input type="checkbox" id="billing-toggle">
+                    <span>Pay annually (save 10%)</span>
+                </label>
+            </div>
+        </div>
+    </section>
+
+    <!-- Pricing Cards -->
+    <section class="pricing-section">
+        <div class="container">
+            <div class="pricing-cards">
+                <!-- Practice Plan -->
+                <div class="pricing-card reveal" data-delay="0">
+                    <h3 class="plan-name">Practice</h3>
+                    <p class="plan-for">Solo or 2–3 provider practice</p>
+                    <div class="price-display">
+                        <span class="price-amount" data-monthly="149" data-annual="134">$149</span><span class="price-period">/mo</span>
+                    </div>
+                    <p class="price-note" data-monthly-note="Billed monthly: $149/mo" data-annual-note="Billed annually: $1,608/yr">Billed monthly: $149/mo</p>
+                    <ul class="features-list">
+                        <li>All core features</li>
+                        <li>Body map & photo capture</li>
+                        <li>PDF export</li>
+                        <li>HIPAA compliant</li>
+                        <li>1 admin seat</li>
+                        <li>Email support</li>
+                    </ul>
+                    <a href="demo.html" class="btn btn--primary">Request Demo →</a>
+                </div>
+
+                <!-- Group Plan (Featured) -->
+                <div class="pricing-card featured reveal" data-delay="1">
+                    <p class="featured-badge">Most Popular</p>
+                    <h3 class="plan-name">Group</h3>
+                    <p class="plan-for">4–15 providers</p>
+                    <div class="price-display">
+                        <span class="price-amount" data-monthly="279" data-annual="251">$279</span><span class="price-period">/mo</span>
+                    </div>
+                    <p class="price-note" data-monthly-note="Billed monthly: $3,348/yr" data-annual-note="Billed annually: $3,012/yr">Billed monthly: $3,348/yr</p>
+                    <ul class="features-list">
+                        <li>Everything in Practice</li>
+                        <li>Analytics dashboard</li>
+                        <li>EHR integration (FHIR R4 roadmap)</li>
+                        <li>Priority support</li>
+                        <li>Usage reporting</li>
+                    </ul>
+                    <a href="demo.html" class="btn btn--primary">Request Demo →</a>
+                </div>
+
+                <!-- Enterprise Plan -->
+                <div class="pricing-card reveal" data-delay="2">
+                    <h3 class="plan-name">Enterprise</h3>
+                    <p class="plan-for">15+ providers / multi-location</p>
+                    <div class="price-display">
+                        <span class="price-amount">Custom</span>
+                    </div>
+                    <p class="price-note">&nbsp;</p>
+                    <ul class="features-list">
+                        <li>Everything in Group</li>
+                        <li>Custom onboarding</li>
+                        <li>Dedicated CSM</li>
+                        <li>SLA guarantees</li>
+                        <li>BAA on request</li>
+                        <li>Custom integrations</li>
+                    </ul>
+                    <a href="demo.html" class="btn btn--primary">Talk to Sales →</a>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Feature Comparison Table -->
+    <section class="comparison-section">
+        <div class="container">
+            <h2>What's included per plan</h2>
+            <div class="table-wrapper">
+                <table class="comparison-table">
+                    <thead>
+                        <tr>
+                            <th>Feature</th>
+                            <th>Practice</th>
+                            <th>Group</th>
+                            <th>Enterprise</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Body map & photo capture</td>
+                            <td><span class="checkmark">✓</span></td>
+                            <td><span class="checkmark">✓</span></td>
+                            <td><span class="checkmark">✓</span></td>
+                        </tr>
+                        <tr>
+                            <td>Structured documentation</td>
+                            <td><span class="checkmark">✓</span></td>
+                            <td><span class="checkmark">✓</span></td>
+                            <td><span class="checkmark">✓</span></td>
+                        </tr>
+                        <tr>
+                            <td>Offline mode</td>
+                            <td><span class="checkmark">✓</span></td>
+                            <td><span class="checkmark">✓</span></td>
+                            <td><span class="checkmark">✓</span></td>
+                        </tr>
+                        <tr>
+                            <td>HIPAA compliance</td>
+                            <td><span class="checkmark">✓</span></td>
+                            <td><span class="checkmark">✓</span></td>
+                            <td><span class="checkmark">✓</span></td>
+                        </tr>
+                        <tr>
+                            <td>PDF export</td>
+                            <td><span class="checkmark">✓</span></td>
+                            <td><span class="checkmark">✓</span></td>
+                            <td><span class="checkmark">✓</span></td>
+                        </tr>
+                        <tr>
+                            <td>Longitudinal tracking</td>
+                            <td><span class="checkmark">✓</span></td>
+                            <td><span class="checkmark">✓</span></td>
+                            <td><span class="checkmark">✓</span></td>
+                        </tr>
+                        <tr>
+                            <td>Analytics dashboard</td>
+                            <td><span class="dash">–</span></td>
+                            <td><span class="checkmark">✓</span></td>
+                            <td><span class="checkmark">✓</span></td>
+                        </tr>
+                        <tr>
+                            <td>EHR integration</td>
+                            <td><span class="dash">–</span></td>
+                            <td><span class="checkmark">✓</span></td>
+                            <td><span class="checkmark">✓</span></td>
+                        </tr>
+                        <tr>
+                            <td>Priority support</td>
+                            <td><span class="dash">–</span></td>
+                            <td><span class="checkmark">✓</span></td>
+                            <td><span class="checkmark">✓</span></td>
+                        </tr>
+                        <tr>
+                            <td>Custom onboarding</td>
+                            <td><span class="dash">–</span></td>
+                            <td><span class="dash">–</span></td>
+                            <td><span class="checkmark">✓</span></td>
+                        </tr>
+                        <tr>
+                            <td>Dedicated CSM</td>
+                            <td><span class="dash">–</span></td>
+                            <td><span class="dash">–</span></td>
+                            <td><span class="checkmark">✓</span></td>
+                        </tr>
+                        <tr>
+                            <td>SLA guarantee</td>
+                            <td><span class="dash">–</span></td>
+                            <td><span class="dash">–</span></td>
+                            <td><span class="checkmark">✓</span></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </section>
+
+    <!-- ROI Callout Section -->
+    <section class="roi-section">
+        <div class="container">
+            <h2>DermMap pays for itself in the first month.</h2>
+            <p class="roi-math">At 20 visits/day, DermMap saves roughly 90 minutes of MA time daily — that's $600/month recovered at a $20/hr wage. The Practice plan costs $149/month. The math is hard to ignore.</p>
+            <a href="demo.html" class="btn btn--primary">See the full ROI calculator →</a>
+        </div>
+    </section>
+
+    <!-- FAQ Section -->
+    <section class="faq-section">
+        <div class="container">
+            <h2>Frequently Asked Questions</h2>
+            <div class="faq-list">
+                <details class="faq-item reveal" data-delay="0">
+                    <summary>Do you charge per patient or per lesion?</summary>
+                    <div class="faq-content">
+                        <p>No. Flat monthly rate per practice, regardless of visit volume or lesion count.</p>
+                    </div>
+                </details>
+
+                <details class="faq-item reveal" data-delay="1">
+                    <summary>What's included in "EHR integration"?</summary>
+                    <div class="faq-content">
+                        <p>PDF export works with any EHR today. Our FHIR R4 integration roadmap covers Epic, Cerner, Athenahealth, and ModMed — the settings infrastructure is built, rollout is phased.</p>
+                    </div>
+                </details>
+
+                <details class="faq-item reveal" data-delay="2">
+                    <summary>How long does onboarding take?</summary>
+                    <div class="faq-content">
+                        <p>Most practices are fully live within 48 hours. The app is designed for zero-training adoption.</p>
+                    </div>
+                </details>
+
+                <details class="faq-item reveal" data-delay="3">
+                    <summary>Is a BAA included?</summary>
+                    <div class="faq-content">
+                        <p>Yes — a Business Associate Agreement is available with all plans.</p>
+                    </div>
+                </details>
+
+                <details class="faq-item reveal" data-delay="4">
+                    <summary>Can I cancel anytime?</summary>
+                    <div class="faq-content">
+                        <p>Monthly plans cancel anytime. Annual plans are non-refundable but include the 10% discount.</p>
+                    </div>
+                </details>
+            </div>
+        </div>
+    </section>
+
+    <!-- Final CTA Section -->
+    <section class="final-cta-section">
+        <div class="container">
+            <h2>Not sure which plan fits?</h2>
+            <p>Let's talk. We'll help you figure it out without a sales pitch.</p>
+            <a href="demo.html" class="btn btn--light">Schedule a 20-minute conversation →</a>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="footer-container">
+            <div class="footer-top">
+                <div class="footer-logo-section">
+                    <div class="footer-logo">
+                        <span class="footer-logo-text">DermMap</span>
+                        <span class="pulse-dot"></span>
+                    </div>
+                    <p class="footer-tagline">Lesion documentation that actually fits in an exam room.</p>
+                </div>
+                <nav class="footer-links">
+                    <ul>
+                        <li><a href="features.html">Features</a></li>
+                        <li><a href="security.html">Security</a></li>
+                        <li><a href="pricing.html">Pricing</a></li>
+                        <li><a href="demo.html">Demo</a></li>
+                    </ul>
+                </nav>
+            </div>
+            <div class="footer-bottom">
+                <div class="footer-badges">
+                    <span class="hipaa-badge">HIPAA Badge</span>
+                </div>
+                <p class="footer-copyright">&copy; 2025 DermMap. All rights reserved.</p>
+            </div>
+        </div>
+    </footer>
+
+    <script src="js/main.js"></script>
+</body>
+</html>

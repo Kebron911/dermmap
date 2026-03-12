@@ -76,7 +76,7 @@ export function AnalyticsDashboard() {
             Analytics Dashboard
           </h1>
           <p className="text-slate-500 text-sm mt-1">
-            {loading ? 'Loading live data…' : 'Comprehensive practice performance metrics — last 6 months'}
+            {loading ? 'Loading live data…' : `Comprehensive practice performance metrics — ${new Date().getFullYear()} YTD`}
           </p>
         </div>
         <div className="flex gap-2">

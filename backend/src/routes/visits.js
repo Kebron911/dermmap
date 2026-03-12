@@ -1,18 +1,57 @@
 import express from 'express';
+import { body, validationResult } from 'express-validator';
 import pool from '../db/pool.js';
 import { authenticateToken } from '../middleware/auth.js';
 
 const router = express.Router();
 router.use(authenticateToken);
 
+// Validation helper
+function validate(req, res) {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    res.status(422).json({ error: 'Validation failed', details: errors.array() });
+    return false;
+  }
+  return true;
+}
+
+const VISIT_STATUSES = ['in_progress', 'pending_review', 'signed', 'locked'];
+
+const createVisitRules = [
+  body('visit_id').isString().trim().notEmpty(),
+  body('patient_id').isString().trim().notEmpty(),
+  body('visit_date').isISO8601().withMessage('visit_date must be a valid ISO 8601 date'),
+  body('visit_type').isString().trim().notEmpty().isLength({ max: 50 }),
+  body('status').isIn(VISIT_STATUSES),
+  body('chief_complaint').optional({ nullable: true }).isString().isLength({ max: 2000 }),
+  body('ma_id').optional({ nullable: true }).isString().trim(),
+  body('ma_name').optional({ nullable: true }).isString().trim().isLength({ max: 255 }),
+];
+
+const updateVisitRules = [
+  body('status').optional().isIn(VISIT_STATUSES),
+  body('provider_id').optional({ nullable: true }).isString().trim(),
+  body('provider_name').optional({ nullable: true }).isString().trim().isLength({ max: 255 }),
+  body('provider_attestation').optional({ nullable: true }).isString().isLength({ max: 5000 }),
+];
+
+// Helper: returns true if role bypasses location checks
+const isPrivileged = (role) => ['admin', 'manager'].includes(role);
+
 // Get visit by ID
 router.get('/:visitId', async (req, res) => {
   try {
     const { visitId } = req.params;
-    
+    const privileged = isPrivileged(req.user.role);
+
+    // Ownership check: join with patients to enforce location tenancy
     const result = await pool.query(
-      'SELECT * FROM visits WHERE visit_id = $1',
-      [visitId]
+      `SELECT v.* FROM visits v
+       JOIN patients pt ON pt.patient_id = v.patient_id
+       WHERE v.visit_id = $1
+         AND ($2 OR pt.location_id = $3)`,
+      [visitId, privileged, req.user.location_id || null]
     );
     
     if (result.rows.length === 0) {
@@ -29,13 +68,26 @@ router.get('/:visitId', async (req, res) => {
     
     visit.lesions = lesionsResult.rows;
     
-    // Get photo URLs for each lesion
-    for (const lesion of visit.lesions) {
+    // Bulk-fetch all photos for all lesions in a single query (avoids N+1)
+    if (visit.lesions.length > 0) {
+      const lesionIds = visit.lesions.map(l => l.lesion_id);
       const photosResult = await pool.query(
-        'SELECT photo_id FROM photos WHERE lesion_id = $1',
-        [lesion.lesion_id]
+        'SELECT lesion_id, photo_id FROM photos WHERE lesion_id = ANY($1)',
+        [lesionIds]
       );
-      lesion.photos = photosResult.rows.map(p => `/api/photos/${p.photo_id}`);
+      // Group photo URLs by lesion_id
+      const photosByLesion = {};
+      for (const row of photosResult.rows) {
+        if (!photosByLesion[row.lesion_id]) photosByLesion[row.lesion_id] = [];
+        photosByLesion[row.lesion_id].push(`/api/photos/${row.photo_id}`);
+      }
+      for (const lesion of visit.lesions) {
+        lesion.photos = photosByLesion[lesion.lesion_id] || [];
+      }
+    } else {
+      for (const lesion of visit.lesions) {
+        lesion.photos = [];
+      }
     }
     
     res.json(visit);
@@ -46,9 +98,20 @@ router.get('/:visitId', async (req, res) => {
 });
 
 // Create visit
-router.post('/', async (req, res) => {
+router.post('/', createVisitRules, async (req, res) => {
+  if (!validate(req, res)) return;
   try {
     const visit = req.body;
+    const privileged = isPrivileged(req.user.role);
+
+    // Verify patient belongs to user's location before creating visit
+    const patientCheck = await pool.query(
+      `SELECT 1 FROM patients WHERE patient_id = $1 AND ($2 OR location_id = $3)`,
+      [visit.patient_id, privileged, req.user.location_id || null]
+    );
+    if (patientCheck.rows.length === 0) {
+      return res.status(404).json({ error: 'Patient not found' });
+    }
     
     const result = await pool.query(
       `INSERT INTO visits (
@@ -73,10 +136,12 @@ router.post('/', async (req, res) => {
 });
 
 // Update visit
-router.put('/:visitId', async (req, res) => {
+router.put('/:visitId', updateVisitRules, async (req, res) => {
+  if (!validate(req, res)) return;
   try {
     const { visitId } = req.params;
     const updates = req.body;
+    const privileged = isPrivileged(req.user.role);
     
     const result = await pool.query(
       `UPDATE visits SET
@@ -87,8 +152,14 @@ router.put('/:visitId', async (req, res) => {
         completed_at = CASE WHEN $2 IN ('signed', 'locked') THEN CURRENT_TIMESTAMP ELSE completed_at END,
         updated_at = CURRENT_TIMESTAMP
       WHERE visit_id = $1
+        AND EXISTS (
+          SELECT 1 FROM patients pt
+          WHERE pt.patient_id = visits.patient_id
+            AND ($6 OR pt.location_id = $7)
+        )
       RETURNING *`,
-      [visitId, updates.status, updates.provider_id, updates.provider_name, updates.provider_attestation]
+      [visitId, updates.status, updates.provider_id, updates.provider_name,
+       updates.provider_attestation, privileged, req.user.location_id || null]
     );
     
     if (result.rows.length === 0) {
@@ -106,10 +177,18 @@ router.put('/:visitId', async (req, res) => {
 router.delete('/:visitId', async (req, res) => {
   try {
     const { visitId } = req.params;
+    const privileged = isPrivileged(req.user.role);
     
     const result = await pool.query(
-      'DELETE FROM visits WHERE visit_id = $1 RETURNING visit_id',
-      [visitId]
+      `DELETE FROM visits
+       WHERE visit_id = $1
+         AND EXISTS (
+           SELECT 1 FROM patients pt
+           WHERE pt.patient_id = visits.patient_id
+             AND ($2 OR pt.location_id = $3)
+         )
+       RETURNING visit_id`,
+      [visitId, privileged, req.user.location_id || null]
     );
     
     if (result.rows.length === 0) {

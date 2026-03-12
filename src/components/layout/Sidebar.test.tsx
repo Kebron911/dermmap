@@ -1,9 +1,16 @@
 import { render, screen } from '@testing-library/react';
+import { MemoryRouter } from 'react-router-dom';
 import userEvent from '@testing-library/user-event';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { Sidebar } from './Sidebar';
 import { useAppStore } from '../../store/appStore';
 import { SYNTHETIC_PATIENTS } from '../../data/syntheticData';
+
+const mockNavigate = vi.fn();
+vi.mock('react-router-dom', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('react-router-dom')>();
+  return { ...actual, useNavigate: () => mockNavigate };
+});
 
 const mockStatus = vi.fn();
 
@@ -32,6 +39,7 @@ const resetStore = () => {
 
 describe('Sidebar', () => {
   beforeEach(() => {
+    mockNavigate.mockClear();
     mockStatus.mockReturnValue({ isOnline: true, wasOffline: false, pendingSyncCount: 0 });
     resetStore();
   });
@@ -47,7 +55,7 @@ describe('Sidebar', () => {
       token: 'test-token',
     });
 
-    render(<Sidebar />);
+    render(<MemoryRouter><Sidebar /></MemoryRouter>);
 
     expect(screen.getByText('Jamie Doe')).toBeInTheDocument();
     expect(screen.getByText('Medical Assistant')).toBeInTheDocument();
@@ -69,10 +77,10 @@ describe('Sidebar', () => {
       token: 'test-token',
     });
 
-    render(<Sidebar />);
+    render(<MemoryRouter><Sidebar /></MemoryRouter>);
 
     await user.click(screen.getByRole('button', { name: 'Patient Search' }));
-    expect(useAppStore.getState().currentPage).toBe('search');
+    expect(mockNavigate).toHaveBeenCalledWith('/search');
 
     await user.click(screen.getByRole('button', { name: 'Sign Out' }));
     expect(useAppStore.getState().currentUser).toBeNull();

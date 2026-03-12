@@ -1,22 +1,43 @@
 import { Patient, AuditLogEntry, ClinicStats } from '../types';
 
-// Clinical-quality placeholder images using DiceBear for demo faces
-// and colored placeholder lesion images
-const lesionPhotos = {
-  benign1: 'https://images.unsplash.com/photo-1576086213369-97a306d36557?w=400&q=80',
-  benign2: 'https://images.unsplash.com/photo-1579684385127-1ef15d508118?w=400&q=80',
-  clinical1: 'https://images.unsplash.com/photo-1559757148-5c350d0d3c56?w=400&q=80',
-};
+// Royalty-free clinical reference images (Unsplash) — used as representative
+// stand-ins for captured lesion photos in the demo.
+const CLINICAL_IMG_POOL = [
+  'https://images.unsplash.com/photo-1576086213369-97a306d36557?w=400&h=400&fit=crop&q=80',
+  'https://images.unsplash.com/photo-1579684385127-1ef15d508118?w=400&h=400&fit=crop&q=80',
+  'https://images.unsplash.com/photo-1559757148-5c350d0d3c56?w=400&h=400&fit=crop&q=80',
+  'https://images.unsplash.com/photo-1576086213369-97a306d36557?w=400&h=400&fit=crop&crop=entropy&q=75',
+  'https://images.unsplash.com/photo-1579684385127-1ef15d508118?w=400&h=400&fit=crop&crop=center&q=75',
+  'https://images.unsplash.com/photo-1559757148-5c350d0d3c56?w=400&h=400&fit=crop&crop=top&q=75',
+];
 
-// Generate lesion photo URL (using colored placeholders for demo)
-const makeLesionPhoto = (id: string, type: 'clinical' | 'dermoscopic' = 'clinical') => ({
-  photo_id: `ph-${id}`,
-  url: `https://placehold.co/400x400/1a1a2e/white?text=Lesion+${id.slice(-2)}`,
-  capture_type: type,
-  captured_at: new Date(Date.now() - Math.random() * 86400000 * 30).toISOString(),
-  captured_by: 'MA Johnson',
-  thumbnail: `https://placehold.co/80x80/1a1a2e/white?text=L${id.slice(-2)}`,
-});
+const DERM_IMG_POOL = [
+  'https://images.unsplash.com/photo-1576086213369-97a306d36557?w=400&h=400&fit=crop&crop=faces&q=85',
+  'https://images.unsplash.com/photo-1579684385127-1ef15d508118?w=400&h=400&fit=crop&crop=entropy&q=85',
+  'https://images.unsplash.com/photo-1559757148-5c350d0d3c56?w=400&h=400&fit=crop&crop=bottom&q=85',
+];
+
+// Deterministic pick — stable across hot-reloads, no Math.random()
+function photoHash(id: string): number {
+  let h = 0;
+  for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) & 0x7fffffff;
+  return h;
+}
+
+const makeLesionPhoto = (id: string, type: 'clinical' | 'dermoscopic' = 'clinical') => {
+  const pool = type === 'dermoscopic' ? DERM_IMG_POOL : CLINICAL_IMG_POOL;
+  const url = pool[photoHash(id) % pool.length];
+  const thumbnail = url.replace('w=400&h=400', 'w=80&h=80');
+  const daysAgo = photoHash(id) % 30;
+  return {
+    photo_id: `ph-${id}`,
+    url,
+    capture_type: type,
+    captured_at: new Date(Date.now() - daysAgo * 86400000).toISOString(),
+    captured_by: (photoHash(id) & 1) ? 'Alex Johnson' : 'Maria Santos',
+    thumbnail,
+  };
+};
 
 export const SYNTHETIC_PATIENTS: Patient[] = [
   {
@@ -37,6 +58,7 @@ export const SYNTHETIC_PATIENTS: Patient[] = [
         ma_id: 'ma-001',
         ma_name: 'Alex Johnson',
         status: 'locked',
+        documentation_time_sec: 11,
         created_at: '2024-01-15T09:00:00Z',
         lesions: [
           {
@@ -90,6 +112,7 @@ export const SYNTHETIC_PATIENTS: Patient[] = [
         ma_id: 'ma-001',
         ma_name: 'Alex Johnson',
         status: 'locked',
+        documentation_time_sec: 8,
         created_at: '2024-07-22T10:30:00Z',
         lesions: [
           {
@@ -118,13 +141,14 @@ export const SYNTHETIC_PATIENTS: Patient[] = [
       },
       {
         visit_id: 'v-001-3',
-        visit_date: '2025-01-08',
+        visit_date: '2026-02-28',
         provider_id: 'dr-001',
         provider_name: 'Dr. Sarah Mitchell',
         ma_id: 'ma-001',
         ma_name: 'Alex Johnson',
         status: 'pending_review',
-        created_at: '2025-01-08T14:00:00Z',
+        documentation_time_sec: 9,
+        created_at: '2026-02-28T14:00:00Z',
         lesions: [
           {
             lesion_id: 'l-001-3-1',
@@ -141,7 +165,7 @@ export const SYNTHETIC_PATIENTS: Patient[] = [
             clinical_notes: 'New pigmented lesion. Dermoscopy: atypical network. Schedule biopsy.',
             biopsy_result: 'pending',
             pathology_notes: '',
-            created_at: '2025-01-08T14:10:00Z',
+            created_at: '2026-02-28T14:10:00Z',
             created_by: 'Alex Johnson',
             photos: [
               makeLesionPhoto('001-3-1-a', 'clinical'),
@@ -165,13 +189,14 @@ export const SYNTHETIC_PATIENTS: Patient[] = [
     visits: [
       {
         visit_id: 'v-002-1',
-        visit_date: '2024-11-05',
+        visit_date: '2026-02-15',
         provider_id: 'dr-002',
         provider_name: 'Dr. James Park',
         ma_id: 'ma-002',
         ma_name: 'Maria Santos',
         status: 'locked',
-        created_at: '2024-11-05T11:00:00Z',
+        documentation_time_sec: 12,
+        created_at: '2026-02-15T11:00:00Z',
         lesions: [
           {
             lesion_id: 'l-002-1-1',
@@ -230,13 +255,14 @@ export const SYNTHETIC_PATIENTS: Patient[] = [
     visits: [
       {
         visit_id: 'v-003-1',
-        visit_date: '2024-02-14',
+        visit_date: '2026-01-20',
         provider_id: 'dr-001',
         provider_name: 'Dr. Sarah Mitchell',
         ma_id: 'ma-002',
         ma_name: 'Maria Santos',
         status: 'locked',
-        created_at: '2024-02-14T09:00:00Z',
+        documentation_time_sec: 7,
+        created_at: '2026-01-20T09:00:00Z',
         lesions: [
           {
             lesion_id: 'l-003-1-1',
@@ -279,6 +305,7 @@ export const SYNTHETIC_PATIENTS: Patient[] = [
         ma_id: 'ma-001',
         ma_name: 'Alex Johnson',
         status: 'locked',
+        documentation_time_sec: 8,
         created_at: '2023-06-10T09:00:00Z',
         lesions: [
           {
@@ -304,13 +331,14 @@ export const SYNTHETIC_PATIENTS: Patient[] = [
       },
       {
         visit_id: 'v-004-2',
-        visit_date: '2024-06-15',
+        visit_date: '2026-02-10',
         provider_id: 'dr-002',
         provider_name: 'Dr. James Park',
         ma_id: 'ma-001',
         ma_name: 'Alex Johnson',
         status: 'locked',
-        created_at: '2024-06-15T10:00:00Z',
+        documentation_time_sec: 9,
+        created_at: '2026-02-10T10:00:00Z',
         lesions: [
           {
             lesion_id: 'l-004-2-1',
@@ -350,13 +378,14 @@ export const SYNTHETIC_PATIENTS: Patient[] = [
     visits: [
       {
         visit_id: 'v-005-1',
-        visit_date: '2024-12-03',
+        visit_date: '2026-03-05',
         provider_id: 'dr-001',
         provider_name: 'Dr. Sarah Mitchell',
         ma_id: 'ma-002',
         ma_name: 'Maria Santos',
         status: 'pending_review',
-        created_at: '2024-12-03T13:00:00Z',
+        documentation_time_sec: 10,
+        created_at: '2026-03-05T13:00:00Z',
         lesions: [
           {
             lesion_id: 'l-005-1-1',
@@ -418,13 +447,14 @@ export const SYNTHETIC_PATIENTS: Patient[] = [
     visits: [
       {
         visit_id: 'v-006-1',
-        visit_date: '2025-01-06',
+        visit_date: '2026-03-10',
         provider_id: 'dr-002',
         provider_name: 'Dr. James Park',
         ma_id: 'ma-001',
         ma_name: 'Alex Johnson',
         status: 'in_progress',
-        created_at: '2025-01-06T08:30:00Z',
+        documentation_time_sec: 5,
+        created_at: '2026-03-10T08:30:00Z',
         lesions: [],
       },
     ],
@@ -441,13 +471,14 @@ export const SYNTHETIC_PATIENTS: Patient[] = [
     visits: [
       {
         visit_id: 'v-007-1',
-        visit_date: '2025-01-07',
+        visit_date: '2026-03-09',
         provider_id: 'dr-001',
         provider_name: 'Dr. Sarah Mitchell',
         ma_id: 'ma-002',
         ma_name: 'Maria Santos',
         status: 'pending_review',
-        created_at: '2025-01-07T09:00:00Z',
+        documentation_time_sec: 7,
+        created_at: '2026-03-09T09:00:00Z',
         lesions: [
           {
             lesion_id: 'l-007-1-1',
@@ -478,7 +509,7 @@ export const SYNTHETIC_PATIENTS: Patient[] = [
 export const AUDIT_LOG: AuditLogEntry[] = [
   {
     log_id: 'log-001',
-    timestamp: '2025-01-08T14:02:11Z',
+    timestamp: '2026-03-10T14:02:11Z',
     user_id: 'ma-001',
     user_name: 'Alex Johnson',
     user_role: 'ma',
@@ -491,7 +522,7 @@ export const AUDIT_LOG: AuditLogEntry[] = [
   },
   {
     log_id: 'log-002',
-    timestamp: '2025-01-08T14:05:33Z',
+    timestamp: '2026-03-10T14:05:33Z',
     user_id: 'ma-001',
     user_name: 'Alex Johnson',
     user_role: 'ma',
@@ -504,7 +535,7 @@ export const AUDIT_LOG: AuditLogEntry[] = [
   },
   {
     log_id: 'log-003',
-    timestamp: '2025-01-08T14:06:12Z',
+    timestamp: '2026-03-10T14:06:12Z',
     user_id: 'ma-001',
     user_name: 'Alex Johnson',
     user_role: 'ma',
@@ -517,7 +548,7 @@ export const AUDIT_LOG: AuditLogEntry[] = [
   },
   {
     log_id: 'log-004',
-    timestamp: '2025-01-08T14:06:45Z',
+    timestamp: '2026-03-10T14:06:45Z',
     user_id: 'ma-001',
     user_name: 'Alex Johnson',
     user_role: 'ma',
@@ -530,7 +561,7 @@ export const AUDIT_LOG: AuditLogEntry[] = [
   },
   {
     log_id: 'log-005',
-    timestamp: '2025-01-08T14:18:22Z',
+    timestamp: '2026-03-10T14:18:22Z',
     user_id: 'dr-001',
     user_name: 'Dr. Sarah Mitchell',
     user_role: 'provider',
@@ -543,7 +574,7 @@ export const AUDIT_LOG: AuditLogEntry[] = [
   },
   {
     log_id: 'log-006',
-    timestamp: '2025-01-08T14:22:05Z',
+    timestamp: '2026-03-10T14:22:05Z',
     user_id: 'dr-001',
     user_name: 'Dr. Sarah Mitchell',
     user_role: 'provider',
@@ -556,7 +587,7 @@ export const AUDIT_LOG: AuditLogEntry[] = [
   },
   {
     log_id: 'log-007',
-    timestamp: '2025-01-08T14:35:00Z',
+    timestamp: '2026-03-10T14:35:00Z',
     user_id: 'admin-001',
     user_name: 'Practice Manager Taylor',
     user_role: 'admin',
@@ -569,7 +600,7 @@ export const AUDIT_LOG: AuditLogEntry[] = [
   },
   {
     log_id: 'log-008',
-    timestamp: '2025-01-08T15:01:44Z',
+    timestamp: '2026-03-10T15:01:44Z',
     user_id: 'ma-002',
     user_name: 'Maria Santos',
     user_role: 'ma',
@@ -582,7 +613,7 @@ export const AUDIT_LOG: AuditLogEntry[] = [
   },
   {
     log_id: 'log-009',
-    timestamp: '2025-01-07T08:00:00Z',
+    timestamp: '2026-03-09T08:00:00Z',
     user_id: 'admin-001',
     user_name: 'Practice Manager Taylor',
     user_role: 'admin',
@@ -595,7 +626,7 @@ export const AUDIT_LOG: AuditLogEntry[] = [
   },
   {
     log_id: 'log-010',
-    timestamp: '2025-01-07T17:45:00Z',
+    timestamp: '2026-03-09T17:45:00Z',
     user_id: 'dr-002',
     user_name: 'Dr. James Park',
     user_role: 'provider',
@@ -642,7 +673,7 @@ export const DEMO_USERS = [
     id: 'ma-001',
     name: 'Alex Johnson',
     role: 'ma' as const,
-    email: 'alex.johnson@dermclinic.com',
+    email: 'alex.ma@dermmap.com',
     credentials: 'CMA',
     description: 'Medical Assistant — Exam Room View',
     subtitle: 'Document lesions, capture photos, complete visits',
@@ -651,21 +682,186 @@ export const DEMO_USERS = [
     id: 'dr-001',
     name: 'Dr. Sarah Mitchell',
     role: 'provider' as const,
-    email: 'sarah.mitchell@dermclinic.com',
+    email: 'sarah.dr@dermmap.com',
     credentials: 'MD, FAAD',
     description: 'Dermatologist — Clinical Review View',
     subtitle: 'Review visits, compare lesion photos, sign off records',
   },
   {
-    id: 'admin-001',
+    id: 'mgr-001',
     name: 'Taylor Brooks',
-    role: 'admin' as const,
-    email: 'taylor.brooks@dermclinic.com',
+    role: 'manager' as const,
+    email: 'taylor.mgr@dermmap.com',
     credentials: 'Practice Manager',
     description: 'Practice Manager — Operations View',
     subtitle: 'Analytics, user management, audit logs, settings',
   },
 ];
+
+// ─── Programmatic patient generator (fills the roster to 75) ────────────────
+
+const FIRST_NAMES_F = ['Patricia', 'Barbara', 'Linda', 'Susan', 'Nancy', 'Karen', 'Betty', 'Helen',
+  'Sandra', 'Donna', 'Carol', 'Ruth', 'Sharon', 'Michelle', 'Laura', 'Sarah', 'Kimberly', 'Deborah',
+  'Jessica', 'Shirley', 'Cynthia', 'Angela', 'Melissa', 'Brenda', 'Amy', 'Anna', 'Rebecca', 'Virginia',
+  'Kathleen', 'Pamela', 'Martha', 'Debra', 'Amanda'];
+
+const FIRST_NAMES_M = ['James', 'John', 'Robert', 'Michael', 'William', 'David', 'Richard', 'Joseph',
+  'Thomas', 'Charles', 'Christopher', 'Daniel', 'Matthew', 'Anthony', 'Mark', 'Donald', 'Steven',
+  'Paul', 'Andrew', 'Joshua', 'Kenneth', 'Kevin', 'Brian', 'George', 'Timothy', 'Ronald', 'Edward',
+  'Jason', 'Jeffrey', 'Ryan', 'Jacob', 'Gary', 'Nicholas'];
+
+const LAST_NAMES = ['Smith', 'Johnson', 'Williams', 'Brown', 'Jones', 'Garcia', 'Miller', 'Davis',
+  'Wilson', 'Anderson', 'Taylor', 'Thomas', 'Jackson', 'White', 'Harris', 'Martin', 'Thompson',
+  'Moore', 'Young', 'Allen', 'King', 'Wright', 'Scott', 'Torres', 'Nguyen', 'Hill', 'Flores',
+  'Green', 'Adams', 'Nelson', 'Baker', 'Hall', 'Rivera', 'Campbell', 'Mitchell', 'Carter', 'Roberts'];
+
+const SKIN_TYPES = ['I', 'II', 'III', 'IV', 'V', 'VI'] as const;
+const BODY_REGIONS_ANT = ['face', 'chest', 'abdomen', 'left_upper_arm', 'right_upper_arm', 'left_forearm', 'right_forearm'] as const;
+const BODY_REGIONS_POST = ['upper_back', 'lower_back', 'left_shoulder', 'right_shoulder', 'left_thigh', 'right_thigh'] as const;
+const ACTIONS = ['monitor', 'biopsy_scheduled', 'biopsy_performed', 'excision', 'monitor', 'monitor'] as const;
+const BIOPSY_RESULTS = ['na', 'na', 'benign', 'atypical', 'benign', 'na'] as const;
+const COLORS_LIST = ['tan', 'brown', 'dark_brown', 'pink', 'multicolored', 'red'] as const;
+const NOTES_BANK = [
+  'Benign-appearing compound nevus. Monitor at next annual visit.',
+  'Dysplastic nevus with mild atypia. Excision recommended per guidelines.',
+  'Seborrheic keratosis. Benign. No intervention required.',
+  'Atypical lesion — ABCDE criteria partially met. Biopsy scheduled.',
+  'Actinic keratosis, treated with liquid nitrogen. Follow-up in 3 months.',
+  'Basal cell carcinoma. Mohs referral placed.',
+  'Dermatofibroma. Benign. Patient educated on self-exam.',
+  'Solar lentigo. Sun protection counseling provided.',
+  'Squamous cell carcinoma in situ (Bowen\'s disease). Excision performed.',
+  'Intradermal nevus. Stable over 2 visits. Continue monitoring.',
+  'Blue nevus. Symmetric, well-circumscribed. Benign features.',
+  'Post-inflammatory hyperpigmentation. No intervention.',
+];
+
+// Seeded pseudo-random to keep data stable across hot-reloads
+function seededRand(seed: number): () => number {
+  let s = seed;
+  return () => {
+    s = (s * 1664525 + 1013904223) & 0xffffffff;
+    return (s >>> 0) / 0xffffffff;
+  };
+}
+
+function pickFrom<T>(arr: readonly T[], rng: () => number): T {
+  return arr[Math.floor(rng() * arr.length)];
+}
+
+function genMRN(n: number): string {
+  return `MRN-${600000 + n * 1171}`;
+}
+
+function genDOB(rng: () => number): string {
+  const year = 1945 + Math.floor(rng() * 55);
+  const month = String(1 + Math.floor(rng() * 12)).padStart(2, '0');
+  const day = String(1 + Math.floor(rng() * 28)).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+function genVisitDate(rng: () => number, yearsAgo: number): string {
+  const base = new Date('2026-03-10');
+  base.setFullYear(base.getFullYear() - yearsAgo);
+  base.setMonth(Math.floor(rng() * 12));
+  base.setDate(1 + Math.floor(rng() * 27));
+  return base.toISOString().split('T')[0];
+}
+
+// Recent date within last 60 days of 2026-03-10
+function genRecentDate(rng: () => number): string {
+  const daysAgo = 5 + Math.floor(rng() * 55);
+  const d = new Date('2026-03-10');
+  d.setDate(d.getDate() - daysAgo);
+  return d.toISOString().split('T')[0];
+}
+
+function genLesion(visitId: string, lesionIdx: number, rng: () => number) {
+  const isAnt = rng() > 0.45;
+  const region = isAnt ? pickFrom(BODY_REGIONS_ANT, rng) : pickFrom(BODY_REGIONS_POST, rng);
+  const action = pickFrom(ACTIONS, rng);
+  const biopsy: import('../types').BiopsyResult = (action === 'biopsy_performed' || action === 'excision')
+    ? pickFrom(['benign', 'atypical', 'benign', 'malignant'] as const, rng)
+    : 'na';
+  const x = 60 + Math.floor(rng() * 80);
+  const y = 50 + Math.floor(rng() * 360);
+  return {
+    lesion_id: `${visitId}-l${lesionIdx}`,
+    body_location_x: x,
+    body_location_y: y,
+    body_region: region,
+    body_view: (isAnt ? 'anterior' : 'posterior') as 'anterior' | 'posterior',
+    size_mm: 2 + Math.round(rng() * 10),
+    shape: pickFrom(['round', 'oval', 'irregular', 'other'] as const, rng),
+    color: pickFrom(COLORS_LIST, rng),
+    border: pickFrom(['regular', 'irregular'] as const, rng),
+    symmetry: pickFrom(['symmetric', 'asymmetric'] as const, rng),
+    action,
+    clinical_notes: pickFrom(NOTES_BANK, rng),
+    biopsy_result: biopsy,
+    pathology_notes: biopsy === 'atypical' ? 'Mildly dysplastic nevus. Recommend excision with 3 mm margin.' :
+      biopsy === 'malignant' ? 'Melanoma in situ. Surgical oncology referral placed.' :
+      biopsy === 'benign' ? 'Benign nevus. No further action.' : '',
+    created_at: new Date().toISOString(),
+    created_by: rng() > 0.5 ? 'Alex Johnson' : 'Maria Santos',
+    photos: [makeLesionPhoto(`gen-${visitId}-l${lesionIdx}`, rng() > 0.6 ? 'dermoscopic' : 'clinical')],
+  };
+}
+
+function generatePatient(n: number): import('../types').Patient {
+  const rng = seededRand(n * 31337 + 42);
+  const isFemale = rng() > 0.45;
+  const firstName = isFemale ? pickFrom(FIRST_NAMES_F, rng) : pickFrom(FIRST_NAMES_M, rng);
+  const lastName = pickFrom(LAST_NAMES, rng);
+  const skinType = pickFrom(SKIN_TYPES, rng);
+  const visitCount = 1 + Math.floor(rng() * 4);
+  const providers = ['dr-001', 'dr-002'];
+  const providerNames = ['Dr. Sarah Mitchell', 'Dr. James Park'];
+
+  const visits = Array.from({ length: visitCount }, (_, vi) => {
+    // Most recent visit is always within the last 60 days so the queue/schedule look current
+    const isLatest = vi === visitCount - 1;
+    const visitDate = isLatest ? genRecentDate(rng) : genVisitDate(rng, visitCount - vi);
+    const visitId = `vg-${n}-${vi}`;
+    const lesionCount = 1 + Math.floor(rng() * 5);
+    const provIdx = Math.floor(rng() * providers.length);
+    const statuses = ['locked', 'locked', 'locked', 'pending_review', 'signed'] as const;
+    return {
+      visit_id: visitId,
+      visit_date: visitDate,
+      provider_id: providers[provIdx],
+      provider_name: providerNames[provIdx],
+      ma_id: rng() > 0.5 ? 'ma-001' : 'ma-002',
+      ma_name: rng() > 0.5 ? 'Alex Johnson' : 'Maria Santos',
+      status: isLatest ? pickFrom(statuses, rng) : 'locked',
+      documentation_time_sec: Math.round(5 + rng() * 12),
+      created_at: `${visitDate}T09:00:00Z`,
+      lesions: Array.from({ length: lesionCount }, (_, li) => genLesion(visitId, li, rng)),
+    };
+  });
+
+  return {
+    patient_id: `pt-gen-${n}`,
+    first_name: firstName,
+    last_name: lastName,
+    date_of_birth: genDOB(rng),
+    mrn: genMRN(n),
+    gender: isFemale ? 'female' : 'male',
+    skin_type: skinType,
+    created_at: `${genVisitDate(rng, 3)}T09:00:00Z`,
+    visits,
+  };
+}
+
+// Generate enough patients to reach a total of 75
+const GENERATED_PATIENTS: import('../types').Patient[] = Array.from(
+  { length: 68 },
+  (_, i) => generatePatient(i + 100),
+);
+
+export const ALL_PATIENTS = [...SYNTHETIC_PATIENTS, ...GENERATED_PATIENTS];
+
+// ─── Today's appointments ────────────────────────────────────────────────────
 
 export const TODAY_APPOINTMENTS = [
   { time: '8:00 AM', patient: SYNTHETIC_PATIENTS[5], reason: 'Annual skin check' },

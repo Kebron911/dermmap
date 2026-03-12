@@ -1,14 +1,60 @@
 import express from 'express';
+import { body, validationResult } from 'express-validator';
 import pool from '../db/pool.js';
 import { authenticateToken } from '../middleware/auth.js';
 
 const router = express.Router();
 router.use(authenticateToken);
 
+// Validation helper — returns 422 with structured errors if input is invalid
+function validate(req, res) {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    res.status(422).json({ error: 'Validation failed', details: errors.array() });
+    return false;
+  }
+  return true;
+}
+
+const createLesionRules = [
+  body('lesion_id').isString().trim().notEmpty(),
+  body('visit_id').isString().trim().notEmpty(),
+  body('patient_id').isString().trim().notEmpty(),
+  body('body_location_x').isFloat({ min: 0, max: 100 }),
+  body('body_location_y').isFloat({ min: 0, max: 100 }),
+  body('size_mm').optional({ nullable: true }).isFloat({ min: 0, max: 500 }),
+  body('action').optional({ nullable: true }).isIn(['monitor', 'biopsy_scheduled', 'biopsy_performed', 'excision', 'referral', 'no_action']),
+  body('biopsy_result').optional({ nullable: true }).isIn(['benign', 'atypical', 'malignant', 'pending', 'na']),
+];
+
+const updateLesionRules = [
+  body('size_mm').optional({ nullable: true }).isFloat({ min: 0, max: 500 }),
+  body('action').optional({ nullable: true }).isIn(['monitor', 'biopsy_scheduled', 'biopsy_performed', 'excision', 'referral', 'no_action']),
+  body('biopsy_result').optional({ nullable: true }).isIn(['benign', 'atypical', 'malignant', 'pending', 'na']),
+  body('clinical_notes').optional({ nullable: true }).isString().isLength({ max: 5000 }),
+  body('pathology_notes').optional({ nullable: true }).isString().isLength({ max: 5000 }),
+];
+
+// Helper: returns true if role bypasses location checks
+const isPrivileged = (role) => ['admin', 'manager'].includes(role);
+
 // Create lesion
-router.post('/', async (req, res) => {
+router.post('/', createLesionRules, async (req, res) => {
+  if (!validate(req, res)) return;
   try {
     const lesion = req.body;
+    const privileged = isPrivileged(req.user.role);
+
+    // Verify the parent visit's patient belongs to user's location
+    const ownerCheck = await pool.query(
+      `SELECT 1 FROM visits v
+       JOIN patients pt ON pt.patient_id = v.patient_id
+       WHERE v.visit_id = $1 AND ($2 OR pt.location_id = $3)`,
+      [lesion.visit_id, privileged, req.user.location_id || null]
+    );
+    if (ownerCheck.rows.length === 0) {
+      return res.status(404).json({ error: 'Visit not found' });
+    }
     
     const result = await pool.query(
       `INSERT INTO lesions (
@@ -37,11 +83,14 @@ router.post('/', async (req, res) => {
 });
 
 // Update lesion
-router.put('/:lesionId', async (req, res) => {
+router.put('/:lesionId', updateLesionRules, async (req, res) => {
+  if (!validate(req, res)) return;
   try {
     const { lesionId } = req.params;
     const updates = req.body;
+    const privileged = isPrivileged(req.user.role);
     
+    // Ownership check: join through visit → patient
     const result = await pool.query(
       `UPDATE lesions SET
         size_mm = COALESCE($2, size_mm),
@@ -55,11 +104,17 @@ router.put('/:lesionId', async (req, res) => {
         pathology_notes = COALESCE($10, pathology_notes),
         updated_at = CURRENT_TIMESTAMP
       WHERE lesion_id = $1
+        AND EXISTS (
+          SELECT 1 FROM visits v
+          JOIN patients pt ON pt.patient_id = v.patient_id
+          WHERE v.visit_id = lesions.visit_id
+            AND ($11 OR pt.location_id = $12)
+        )
       RETURNING *`,
       [
         lesionId, updates.size_mm, updates.shape, updates.color, updates.border,
         updates.symmetry, updates.action, updates.clinical_notes, updates.biopsy_result,
-        updates.pathology_notes
+        updates.pathology_notes, privileged, req.user.location_id || null
       ]
     );
     
@@ -78,10 +133,20 @@ router.put('/:lesionId', async (req, res) => {
 router.delete('/:lesionId', async (req, res) => {
   try {
     const { lesionId } = req.params;
+    const privileged = isPrivileged(req.user.role);
     
+    // Ownership check: delete only if within user's location
     const result = await pool.query(
-      'DELETE FROM lesions WHERE lesion_id = $1 RETURNING lesion_id',
-      [lesionId]
+      `DELETE FROM lesions
+       WHERE lesion_id = $1
+         AND EXISTS (
+           SELECT 1 FROM visits v
+           JOIN patients pt ON pt.patient_id = v.patient_id
+           WHERE v.visit_id = lesions.visit_id
+             AND ($2 OR pt.location_id = $3)
+         )
+       RETURNING lesion_id`,
+      [lesionId, privileged, req.user.location_id || null]
     );
     
     if (result.rows.length === 0) {

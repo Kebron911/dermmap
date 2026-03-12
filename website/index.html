@@ -1,0 +1,531 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="DermMap: Document skin lesions in 8 seconds. Mobile-first dermatology documentation platform for clinics.">
+  <title>DermMap — Lesion Documentation in 8 Seconds</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+  <!-- Navigation Bar -->
+  <nav id="main-nav" class="nav">
+    <div class="nav-container">
+      <div class="nav-logo">
+        <span class="logo-text">DermMap</span>
+        <span class="logo-pulse"></span>
+      </div>
+      <ul class="nav-links">
+        <li><a href="index.html" class="active">Home</a></li>
+        <li><a href="features.html">Features</a></li>
+        <li><a href="security.html">Security</a></li>
+        <li><a href="pricing.html">Pricing</a></li>
+        <li><a href="demo.html" class="nav-demo-btn">Demo</a></li>
+      </ul>
+      <button id="mobile-menu-btn" class="mobile-menu-btn" aria-label="Toggle menu">
+        <span></span>
+        <span></span>
+        <span></span>
+      </button>
+    </div>
+    <div id="mobile-menu" class="mobile-menu">
+      <ul>
+        <li><a href="index.html">Home</a></li>
+        <li><a href="features.html">Features</a></li>
+        <li><a href="security.html">Security</a></li>
+        <li><a href="pricing.html">Pricing</a></li>
+        <li><a href="demo.html" class="demo-link">Demo</a></li>
+      </ul>
+    </div>
+  </nav>
+
+  <!-- Hero Section -->
+  <section class="hero" id="home">
+  <div class="hero-inner">
+    <div class="hero-content">
+      <div class="hero-eyebrow">Purpose-built dermatology documentation</div>
+      <h1 class="hero-title">
+        Document a skin lesion in <span>8 seconds.</span><br>
+        On any phone. In any exam room.
+      </h1>
+      <p class="hero-subtitle">
+        DermMap is the mobile-first platform that puts lesion documentation where it belongs: in the MA's hands during the exam, not in a physician's lap at 8 PM.
+      </p>
+      <div class="hero-cta">
+        <a href="demo.html" class="btn btn-primary">Request a Demo →</a>
+        <button class="btn btn-secondary" onclick="alert('2-minute walkthrough video player would load here')">Watch 2-min walkthrough</button>
+      </div>
+      <div class="trust-bar">
+        <span>Trusted by dermatology practices</span>
+        <span class="divider">·</span>
+        <span>HIPAA Compliant</span>
+        <span class="divider">·</span>
+        <span>Works alongside your EHR</span>
+      </div>
+    </div>
+    <div class="hero-visual">
+      <div class="phone-mockup">
+        <div class="phone-notch"></div>
+        <div class="phone-screen">
+          <div class="screen-header">DermMap</div>
+          <div class="body-map-preview">
+            <div class="body-outline">
+              <div class="head"></div>
+              <div class="torso"></div>
+              <div class="arm arm-left"></div>
+              <div class="arm arm-right"></div>
+              <div class="leg leg-left"></div>
+              <div class="leg leg-right"></div>
+              <div class="lesion lesion-1"></div>
+              <div class="lesion lesion-2"></div>
+              <div class="lesion lesion-3"></div>
+            </div>
+          </div>
+          <div class="screen-footer">Tap to document →</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  </section>
+
+  <!-- Stats Bar -->
+  <section class="stats-bar">
+    <div class="stats-container">
+      <div class="stat-card">
+        <div class="stat-number" data-target="8" data-suffix="s">8s</div>
+        <p class="stat-label">Avg. documentation time</p>
+      </div>
+      <div class="stat-card">
+        <div class="stat-number" data-target="96" data-suffix="%">96%</div>
+        <p class="stat-label">MA adoption rate after training</p>
+      </div>
+      <div class="stat-card">
+        <div class="stat-number" data-target="6" data-suffix="+">6+</div>
+        <p class="stat-label">Minutes saved per patient</p>
+      </div>
+      <div class="stat-card">
+        <div class="stat-number" data-target="100" data-suffix="%">100%</div>
+        <p class="stat-label">HIPAA compliant by design</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Problem Section -->
+  <section class="problem-section" id="features">
+    <div class="container">
+      <h2>Your current workflow costs you more than you think.</h2>
+      <p class="section-intro">
+        Every patient visit includes 4–6 minutes of unbillable MA time spent transcribing notes into your EHR. That's $7,000+ per provider per year in lost productivity.
+      </p>
+
+      <!-- Comparison -->
+      <div class="comparison">
+        <div class="comparison-column">
+          <h3>❌ Traditional EHR Workflow</h3>
+          <ul class="comparison-list">
+            <li>MA calls out findings while provider hand-writes notes</li>
+            <li>Provider manually enters findings into EHR at desk</li>
+            <li>No visual record of lesion location or appearance</li>
+            <li>4–6 minutes per patient of uncompensated time</li>
+            <li>Photos taken separately and filed manually</li>
+          </ul>
+        </div>
+        <div class="comparison-column">
+          <h3>✅ DermMap Workflow</h3>
+          <ul class="comparison-list">
+            <li>MA documents lesion location and appearance during exam</li>
+            <li>DermMap generates clinical PDF in real-time</li>
+            <li>Automatic body map with lesion marker and photo</li>
+            <li>8 seconds per lesion. No desk work required.</li>
+            <li>Drops directly into any EHR. No integration delay.</li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- Chart -->
+      <div class="chart-container">
+        <div id="comparison-chart" class="chart"></div>
+        <p class="chart-label">Documentation Time: EHR Workflow vs DermMap</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Why DermMap Section -->
+  <section class="why-section">
+    <div class="container">
+      <div class="section-label">Why DermMap</div>
+      <h2>Built for the exam room. Not forced into it.</h2>
+      <div class="features-grid">
+        <div class="feature-card reveal" data-delay="0">
+          <div class="feature-icon">📱</div>
+          <h3>Phone-first, by design</h3>
+          <p>Designed from the ground up for a clinician's hand during a 5-minute patient visit. Not a desktop app crammed into a responsive wrapper. Not a tablet app adapted to phones.</p>
+        </div>
+        <div class="feature-card reveal" data-delay="100">
+          <div class="feature-icon">⚡</div>
+          <h3>Under 10 seconds, not an estimate</h3>
+          <p>Real clinics, real workflow. From "patient selected" to "lesion documented with photo" in 8 seconds flat. No transcription. No re-entry. No waiting.</p>
+        </div>
+        <div class="feature-card reveal" data-delay="200">
+          <div class="feature-icon">🔒</div>
+          <h3>HIPAA built in, not bolted on</h3>
+          <p>AES-256 encryption, TLS 1.3, automatic audit logs, zero access to camera roll. Security as architecture, not an afterthought. Audited annually by third-party firm.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Workflow Section -->
+  <section class="workflow-section">
+    <div class="container">
+      <div class="section-label">How It Works</div>
+      <h2>From patient selected to lesion documented.</h2>
+
+      <!-- Workflow Tabs -->
+      <div class="workflow-tabs">
+        <button class="workflow-step" data-step="1">Step 1: Select Patient</button>
+        <button class="workflow-step" data-step="2">Step 2: Tap Body Map</button>
+        <button class="workflow-step" data-step="3">Step 3: Snap Photo</button>
+        <button class="workflow-step" data-step="4">Step 4: Document</button>
+        <button class="workflow-step" data-step="5">Step 5: Visit Complete</button>
+      </div>
+
+      <!-- Workflow Panels -->
+      <div class="workflow-panels">
+        <div class="workflow-panel" data-panel="1">
+          <h3>Select Patient</h3>
+          <p>Open DermMap and search for the patient. Sync with your EHR at the start of day—or pull on demand. Offline mode available for exam rooms without Wi-Fi.</p>
+          <div class="workflow-visual" style="background-color: #E0F5F5; height: 150px; border-radius: 8px; display: flex; align-items: center; justify-content: center; color: #007272; font-weight: bold;">Patient List Icon</div>
+        </div>
+        <div class="workflow-panel" data-panel="2" style="display: none;">
+          <h3>Tap Body Map</h3>
+          <p>Interactive body map appears. Tap anywhere a lesion appears—head, neck, torso, limbs. Each tap marks a location. No freehand drawing required.</p>
+          <div class="workflow-visual" style="background-color: #E0F5F5; height: 150px; border-radius: 8px; display: flex; align-items: center; justify-content: center; color: #007272; font-weight: bold;">Body Map Icon</div>
+        </div>
+        <div class="workflow-panel" data-panel="3" style="display: none;">
+          <h3>Snap Photo</h3>
+          <p>Camera opens. Snap a photo of the lesion. Built-in focus and exposure guides ensure consistent clinical-quality images. Auto-timestamp and location tagging.</p>
+          <div class="workflow-visual" style="background-color: #E0F5F5; height: 150px; border-radius: 8px; display: flex; align-items: center; justify-content: center; color: #007272; font-weight: bold;">Camera Icon</div>
+        </div>
+        <div class="workflow-panel" data-panel="4" style="display: none;">
+          <h3>Document</h3>
+          <p>Add clinical notes: size, color, characteristics, assessment, plan. Pre-filled templates based on lesion type. Voice-to-text available for hands-free entry.</p>
+          <div class="workflow-visual" style="background-color: #E0F5F5; height: 150px; border-radius: 8px; display: flex; align-items: center; justify-content: center; color: #007272; font-weight: bold;">Documentation Icon</div>
+        </div>
+        <div class="workflow-panel" data-panel="5" style="display: none;">
+          <h3>Visit Complete</h3>
+          <p>Clinical PDF auto-generates. Marked for your EHR. Patient summary included. Ready to print or attach to chart in one tap. Longitudinal history tracked automatically.</p>
+          <div class="workflow-visual" style="background-color: #E0F5F5; height: 150px; border-radius: 8px; display: flex; align-items: center; justify-content: center; color: #007272; font-weight: bold;">PDF Icon</div>
+        </div>
+      </div>
+
+      <!-- Stat Callout -->
+      <div class="workflow-callout">
+        <strong>Average DermMap documentation time: 8 seconds per lesion.</strong><br>
+        Industry average: 4–6 minutes.
+      </div>
+    </div>
+  </section>
+
+  <!-- For Physicians Section -->
+  <section class="physician-section">
+    <div class="container">
+      <h2>The longitudinal view that changes how you follow patients.</h2>
+      <p class="section-intro">
+        Every lesion on one body map. Color-coded by status. Monitored, biopsied, excised. One tap to see the history of a lesion across months or years. No hunting through photos. No guessing if you saw that spot before.
+      </p>
+
+      <div class="physician-content">
+        <div class="physician-features">
+          <h3>What physicians get:</h3>
+          <ul class="features-checklist">
+            <li>✓ Complete body map overview in one view</li>
+            <li>✓ Lesion history timeline: all photos, notes, assessments in chronological order</li>
+            <li>✓ Color-coded status: monitoring (teal), biopsied (orange), excised (gray)</li>
+            <li>✓ Comparison mode: side-by-side lesion photos across different visits</li>
+            <li>✓ AI-assisted change detection: flagged lesions showing growth or change</li>
+            <li>✓ Export ready: clinical PDF or raw data to your EHR, audit-logged</li>
+          </ul>
+        </div>
+        <div class="body-map-visual">
+          <div class="body-silhouette">
+            <div class="head-circle"></div>
+            <div class="torso-rect"></div>
+            <div class="arm-left-rect"></div>
+            <div class="arm-right-rect"></div>
+            <div class="leg-left-rect"></div>
+            <div class="leg-right-rect"></div>
+            <div class="lesion-dot monitoring" title="Monitoring"></div>
+            <div class="lesion-dot monitoring" title="Monitoring"></div>
+            <div class="lesion-dot biopsied" title="Biopsied"></div>
+            <div class="lesion-dot excised" title="Excised"></div>
+            <div class="lesion-dot monitoring" title="Monitoring"></div>
+          </div>
+          <div class="legend">
+            <span class="legend-item"><span class="legend-dot" style="background:#14B8A6;"></span> Monitoring</span>
+            <span class="legend-item"><span class="legend-dot" style="background:#F97316;"></span> Biopsied</span>
+            <span class="legend-item"><span class="legend-dot" style="background:#94A3B8;"></span> Excised</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ROI Calculator Section -->
+  <section class="roi-section" id="pricing">
+    <div class="container">
+      <h2>Calculate your time savings.</h2>
+      <p class="section-intro">See how DermMap reduces unbillable administrative time at your clinic.</p>
+
+      <div class="roi-calculator">
+        <div class="roi-inputs">
+          <div class="roi-input-group">
+            <label for="roi-visits">Daily patient visits</label>
+            <input type="range" id="roi-visits" min="5" max="50" value="20">
+            <span id="roi-visits-val" class="input-value">20</span> visits
+          </div>
+
+          <div class="roi-input-group">
+            <label for="roi-providers">Number of providers</label>
+            <input type="range" id="roi-providers" min="1" max="15" value="3">
+            <span id="roi-providers-val" class="input-value">3</span> providers
+          </div>
+
+          <div class="roi-input-group">
+            <label for="roi-wage">MA hourly rate</label>
+            <input type="range" id="roi-wage" min="15" max="35" value="20">
+            $<span id="roi-wage-val" class="input-value">20</span>/hour
+          </div>
+        </div>
+
+        <div class="roi-results">
+          <div class="roi-result">
+            <p class="roi-label">Hours saved per month</p>
+            <p class="roi-value"><span id="roi-hours">0</span> hrs</p>
+          </div>
+          <div class="roi-result">
+            <p class="roi-label">Monthly value recovered</p>
+            <p class="roi-value">$<span id="roi-monthly">0</span></p>
+          </div>
+          <div class="roi-result">
+            <p class="roi-label">Annual value recovered</p>
+            <p class="roi-value">$<span id="roi-annual">0</span></p>
+          </div>
+          <div class="roi-result">
+            <p class="roi-label">ROI multiple vs DermMap cost</p>
+            <p class="roi-value"><span id="roi-multiplier">0</span>x</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- ROI Chart -->
+      <div id="roi-chart" class="chart" style="margin-top: 40px;"></div>
+
+      <div class="roi-cta" style="text-align: center; margin-top: 40px;">
+        <p style="margin-bottom: 20px;">See how DermMap pays for itself.</p>
+        <a href="demo.html" class="btn btn-primary">Request Demo →</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- EHR Integration Section -->
+  <section class="ehr-section">
+    <div class="container">
+      <h2>No integration project required on day one.</h2>
+      <p class="section-intro">
+        DermMap generates a clinical PDF that drops directly into your EHR—Epic, Cerner, Athenahealth, eClinicalWorks, ModMed EMA, or any system. Works alongside your current workflow from day one. Native integration roadmap in 2026.
+      </p>
+
+      <div class="ehr-integration-flow">
+        <div class="ehr-flow-step">📱 DermMap App</div>
+        <span class="ehr-flow-arrow">→</span>
+        <div class="ehr-flow-step">📄 Clinical PDF</div>
+        <span class="ehr-flow-arrow">→</span>
+        <div class="ehr-flow-step">🏥 Your EHR</div>
+      </div>
+
+      <div class="ehr-badges">
+        <span class="ehr-badge">Epic</span>
+        <span class="ehr-badge">Cerner</span>
+        <span class="ehr-badge">Athenahealth</span>
+        <span class="ehr-badge">eClinicalWorks</span>
+        <span class="ehr-badge">ModMed EMA</span>
+      </div>
+
+      <div class="ehr-callout">
+        <strong>Works alongside your EHR.</strong> No integration wait. No IT project. Just install DermMap, document in the exam room, drop the PDF into your chart. Day-one ready.
+      </div>
+    </div>
+  </section>
+
+  <!-- Security Callout Section -->
+  <section class="security-callout" id="security">
+    <div class="container">
+      <h2>HIPAA isn't a feature. It's the foundation.</h2>
+      <p class="section-intro">
+        Built from day one with healthcare security as the core architecture, not a compliance checklist added at the end.
+      </p>
+
+      <div class="security-stats">
+        <div class="security-stat-box">
+          <div class="security-stat-title">AES-256</div>
+          <p>Encryption in transit and at rest</p>
+        </div>
+        <div class="security-stat-box">
+          <div class="security-stat-title">TLS 1.3</div>
+          <p>Modern transport security</p>
+        </div>
+        <div class="security-stat-box">
+          <div class="security-stat-title">6-Year</div>
+          <p>Automatic audit trail</p>
+        </div>
+        <div class="security-stat-box">
+          <div class="security-stat-title">Zero</div>
+          <p>Camera roll access</p>
+        </div>
+      </div>
+
+      <p style="text-align: center; margin-top: 30px;">
+        <a href="security.html" class="link-with-arrow">See full security specs →</a>
+      </p>
+    </div>
+  </section>
+
+  <!-- Testimonials Section -->
+  <section class="testimonials">
+    <div class="container">
+      <h2>What dermatology practices are saying.</h2>
+      <div class="testimonials-grid">
+        <div class="testimonial-card">
+          <p class="testimonial-quote">
+            "We saved 3 hours a day in administrative work. Our MAs actually enjoy documenting now. That was unexpected."
+          </p>
+          <p class="testimonial-attribution">
+            <strong>Dr. Lisa Chen</strong><br>
+            Metropolitan Dermatology, Seattle
+          </p>
+        </div>
+        <div class="testimonial-card">
+          <p class="testimonial-quote">
+            "The longitudinal view changed how I follow melanoma patients. I can see the entire history in one glance. No guessing."
+          </p>
+          <p class="testimonial-attribution">
+            <strong>Dr. Marcus Johnson</strong><br>
+            Coastal Skin Health, San Francisco
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Demo CTA Section -->
+  <section class="cta-section">
+    <div class="container">
+      <h2>See it in 20 minutes.</h2>
+      <p class="section-intro">
+        Live walkthrough. Actual app. Real clinic scenario. Timed. You'll see exactly how DermMap cuts documentation from minutes to seconds.
+      </p>
+
+      <form id="demo-form" class="demo-form">
+        <div class="form-row">
+          <div class="form-group">
+            <label for="demo-first-name">First name</label>
+            <input type="text" id="demo-first-name" name="first_name" required>
+          </div>
+          <div class="form-group">
+            <label for="demo-last-name">Last name</label>
+            <input type="text" id="demo-last-name" name="last_name" required>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="demo-practice">Practice name</label>
+          <input type="text" id="demo-practice" name="practice_name" required>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="demo-ehr">EHR system</label>
+            <select id="demo-ehr" name="ehr_system" required>
+              <option value="">Select EHR</option>
+              <option value="epic">Epic</option>
+              <option value="cerner">Cerner</option>
+              <option value="athena">Athenahealth</option>
+              <option value="ecw">eClinicalWorks</option>
+              <option value="modmed">ModMed EMA</option>
+              <option value="other">Other</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="demo-size">Practice size</label>
+            <select id="demo-size" name="practice_size" required>
+              <option value="">Select size</option>
+              <option value="1-3">1–3 providers</option>
+              <option value="4-10">4–10 providers</option>
+              <option value="11+">11+ providers</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="demo-time">Best time to reach you</label>
+          <select id="demo-time" name="best_time" required>
+            <option value="">Select time</option>
+            <option value="morning">Morning (8 AM–12 PM)</option>
+            <option value="afternoon">Afternoon (12 PM–5 PM)</option>
+            <option value="flexible">Flexible</option>
+          </select>
+        </div>
+
+        <button type="submit" class="btn btn-primary">Request My Demo →</button>
+        <p style="font-size: 13px; color: #666; margin-top: 15px;">Usually responds within 1 business day. No sales pressure.</p>
+      </form>
+
+      <div id="form-success" class="form-success" style="display: none;">
+        <h3>Thanks! We'll be in touch within 1 business day.</h3>
+        <p>Check your email for confirmation. In the meantime, feel free to explore our <a href="security.html">security documentation</a>.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <div class="footer-container">
+      <div class="footer-column">
+        <div class="footer-logo">DermMap</div>
+        <p class="footer-tagline">Lesion documentation. In the exam room. In seconds.</p>
+        <div class="footer-badge">HIPAA Compliant</div>
+      </div>
+      <div class="footer-column">
+        <h4>Product</h4>
+        <ul>
+          <li><a href="features.html">Features</a></li>
+          <li><a href="security.html">Security</a></li>
+          <li><a href="pricing.html">Pricing</a></li>
+        </ul>
+      </div>
+      <div class="footer-column">
+        <h4>Company</h4>
+        <ul>
+          <li><a href="demo.html">Demo</a></li>
+          <li><a href="demo.html">Contact</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <p>&copy; 2026 DermMap. All rights reserved.</p>
+    </div>
+  </footer>
+
+  <!-- Mobile Sticky CTA -->
+  <div id="mobile-cta" class="mobile-cta" style="display: none;">
+    <a href="demo.html" class="btn btn-primary">Request Demo →</a>
+  </div>
+
+  <!-- JavaScript -->
+  <script src="js/main.js"></script>
+</body>
+</html>

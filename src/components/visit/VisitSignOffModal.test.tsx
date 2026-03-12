@@ -104,7 +104,7 @@ describe('VisitSignOffModal', () => {
     fireEvent.click(signedButton);
 
     // Check for attestation textarea
-    const attestationField = screen.getByPlaceholderText(/I have reviewed all documented lesions/i);
+    const attestationField = screen.getByPlaceholderText(/Clinical assessment, plan, and provider attestation/i);
     expect(attestationField).toBeInTheDocument();
   });
 
@@ -127,7 +127,7 @@ describe('VisitSignOffModal', () => {
     fireEvent.click(lockedButton);
 
     // Check for attestation textarea
-    const attestationField = screen.getByPlaceholderText(/I have reviewed all documented lesions/i);
+    const attestationField = screen.getByPlaceholderText(/Clinical assessment, plan, and provider attestation/i);
     expect(attestationField).toBeInTheDocument();
   });
 
@@ -150,7 +150,7 @@ describe('VisitSignOffModal', () => {
     fireEvent.click(signedButton);
 
     // Enter attestation text
-    const attestationField = screen.getByPlaceholderText(/I have reviewed all documented lesions/i);
+    const attestationField = screen.getByPlaceholderText(/Clinical assessment, plan, and provider attestation/i);
     fireEvent.change(attestationField, { target: { value: 'I attest that I have reviewed all documentation' } });
 
     expect(attestationField).toHaveValue('I attest that I have reviewed all documentation');
@@ -196,7 +196,7 @@ describe('VisitSignOffModal', () => {
     const signedButton = screen.getByRole('button', { name: /Signed & Complete/i });
     fireEvent.click(signedButton);
 
-    const attestationField = screen.getByPlaceholderText(/I have reviewed all documented lesions/i);
+    const attestationField = screen.getByPlaceholderText(/Clinical assessment, plan, and provider attestation/i);
     fireEvent.change(attestationField, { target: { value: 'I attest' } });
 
     const updateButton = screen.getByRole('button', { name: /Update Status/i });
@@ -229,7 +229,7 @@ describe('VisitSignOffModal', () => {
     // Run all timers to trigger the delayed callback
     vi.runAllTimers();
     
-    expect(mockOnSignOff).toHaveBeenCalledWith('pending_review');
+    expect(mockOnSignOff).toHaveBeenCalledWith('pending_review', '');
     
     vi.useRealTimers();
   });

@@ -83,8 +83,9 @@ function useProviderData() {
 
     staffMap.forEach(s => {
       s.photos_per_lesion = s.total_visits_documented > 0 ? Math.round((s.total_photos_taken / s.total_visits_documented) * 10) / 10 : 0;
-      s.completeness_pct = Math.round(75 + Math.random() * 20); // synthetic
-      s.avg_documentation_time_sec = Math.round(6 + Math.random() * 4);
+      // Deterministic values derived from user_id so they don't change on re-render
+      s.completeness_pct = Math.round(75 + (s.user_id.charCodeAt(s.user_id.length - 1) % 20));
+      s.avg_documentation_time_sec = Math.round(6 + (s.user_id.charCodeAt(0) % 4));
       s.visits_per_day = Math.round((s.total_visits_documented / 30) * 10) / 10;
     });
 

@@ -1,13 +1,24 @@
 import express from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
+import { randomUUID } from 'crypto';
+import rateLimit from 'express-rate-limit';
 import pool from '../db/pool.js';
-import { authenticateToken } from '../middleware/auth.js';
+import { authenticateToken, authorizeRoles } from '../middleware/auth.js';
 
 const router = express.Router();
 
+// Strict rate limiter for the login endpoint — brute-force protection
+const loginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 10,                   // 10 attempts per window per IP
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many login attempts. Please try again in 15 minutes.' },
+});
+
 // Login
-router.post('/login', async (req, res) => {
+router.post('/login', loginLimiter, async (req, res) => {
   try {
     const { email, password } = req.body;
     
@@ -17,7 +28,7 @@ router.post('/login', async (req, res) => {
     
     // Find user
     const result = await pool.query(
-      'SELECT id, name, email, role, password_hash FROM users WHERE email = $1',
+      'SELECT id, name, email, role, location_id, password_hash FROM users WHERE email = $1',
       [email]
     );
     
@@ -33,15 +44,16 @@ router.post('/login', async (req, res) => {
       return res.status(401).json({ error: 'Invalid credentials' });
     }
     
-    // Generate JWT
+    // Generate JWT — explicitly HS256 to match the algorithm constraint in authenticateToken
     const token = jwt.sign(
       { 
         id: user.id,
         email: user.email,
-        role: user.role 
+        role: user.role,
+        location_id: user.location_id || null,
       },
       process.env.JWT_SECRET,
-      { expiresIn: process.env.JWT_EXPIRES_IN || '24h' }
+      { algorithm: 'HS256', expiresIn: process.env.JWT_EXPIRES_IN || '24h' }
     );
     
     // Return user data and token
@@ -50,7 +62,8 @@ router.post('/login', async (req, res) => {
         id: user.id,
         name: user.name,
         email: user.email,
-        role: user.role
+        role: user.role,
+        location_id: user.location_id || null,
       },
       token
     });
@@ -61,13 +74,18 @@ router.post('/login', async (req, res) => {
   }
 });
 
-// Register (for demo/development)
-router.post('/register', async (req, res) => {
+// Register — requires an authenticated admin/manager to create accounts.
+// Self-registration is disabled to prevent unauthorised access to PHI.
+router.post('/register', authenticateToken, authorizeRoles('admin', 'manager'), async (req, res) => {
   try {
-    const { name, email, password, role } = req.body;
+    const { name, email, password, role, location_id } = req.body;
     
     if (!name || !email || !password || !role) {
       return res.status(400).json({ error: 'All fields required' });
+    }
+    
+    if (password.length < 12) {
+      return res.status(400).json({ error: 'Password must be at least 12 characters (HIPAA requirement)' });
     }
     
     if (!['ma', 'provider', 'manager'].includes(role)) {
@@ -84,27 +102,27 @@ router.post('/register', async (req, res) => {
       return res.status(409).json({ error: 'User already exists' });
     }
     
-    // Hash password
-    const hashedPassword = await bcrypt.hash(password, 10);
+    // Hash password with cost factor 12 (HIPAA-grade)
+    const hashedPassword = await bcrypt.hash(password, 12);
     
-    // Generate user ID
-    const userId = `${role}-${Date.now()}`;
+    // Generate cryptographically random user ID
+    const userId = randomUUID();
     
     // Insert user
     await pool.query(
-      'INSERT INTO users (id, name, email, password_hash, role) VALUES ($1, $2, $3, $4, $5)',
-      [userId, name, email, hashedPassword, role]
+      'INSERT INTO users (id, name, email, password_hash, role, location_id) VALUES ($1, $2, $3, $4, $5, $6)',
+      [userId, name, email, hashedPassword, role, location_id || req.user.location_id || null]
     );
     
-    // Generate JWT
+    // Generate JWT with explicit HS256
     const token = jwt.sign(
-      { id: userId, email, role },
+      { id: userId, email, role, location_id: location_id || req.user.location_id || null },
       process.env.JWT_SECRET,
-      { expiresIn: process.env.JWT_EXPIRES_IN || '24h' }
+      { algorithm: 'HS256', expiresIn: process.env.JWT_EXPIRES_IN || '24h' }
     );
     
     res.status(201).json({
-      user: { id: userId, name, email, role },
+      user: { id: userId, name, email, role, location_id: location_id || null },
       token
     });
     
@@ -120,7 +138,8 @@ router.get('/verify', authenticateToken, (req, res) => {
     user: {
       id: req.user.id,
       email: req.user.email,
-      role: req.user.role
+      role: req.user.role,
+      location_id: req.user.location_id || null,
     },
     valid: true
   });
@@ -132,10 +151,11 @@ router.post('/refresh', authenticateToken, (req, res) => {
     { 
       id: req.user.id,
       email: req.user.email,
-      role: req.user.role 
+      role: req.user.role,
+      location_id: req.user.location_id || null,
     },
     process.env.JWT_SECRET,
-    { expiresIn: process.env.JWT_EXPIRES_IN || '24h' }
+    { algorithm: 'HS256', expiresIn: process.env.JWT_EXPIRES_IN || '24h' }
   );
   
   res.json({ token });

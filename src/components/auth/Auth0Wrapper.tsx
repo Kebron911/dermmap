@@ -30,7 +30,7 @@ export function Auth0Wrapper({ children }: Auth0WrapperProps) {
         audience: AUTH0_AUDIENCE,
         scope: 'openid profile email',
       }}
-      cacheLocation="localstorage"
+      cacheLocation="memory"
       useRefreshTokens={true}
     >
       {children}

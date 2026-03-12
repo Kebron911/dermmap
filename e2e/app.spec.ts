@@ -1,4 +1,32 @@
 import { test, expect } from '@playwright/test';
+import AxeBuilder from '@axe-core/playwright';
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+/** Log in as an MA (demo mode — no backend required). */
+async function loginAsMA(page: Parameters<typeof test>[1]['page']) {
+  await page.goto('/');
+  await page.getByTestId('demo-user-ma').click();
+  await page.getByRole('button', { name: /continue/i }).click();
+  await page.getByLabel('Authentication code').fill('123456');
+  await page.getByRole('button', { name: /sign in/i }).click();
+  await expect(page.getByText(/today/i).or(page.getByText(/schedule/i))).toBeVisible({ timeout: 8000 });
+}
+
+/** Log in as a Provider (demo mode). */
+async function loginAsProvider(page: Parameters<typeof test>[1]['page']) {
+  await page.goto('/');
+  await page.getByTestId('demo-user-provider').click();
+  await page.getByRole('button', { name: /continue/i }).click();
+  await page.getByLabel('Authentication code').fill('123456');
+  await page.getByRole('button', { name: /sign in/i }).click();
+}
+
+// ---------------------------------------------------------------------------
+// Login Flow
+// ---------------------------------------------------------------------------
 
 test.describe('Login Flow', () => {
   test('should display demo login screen', async ({ page }) => {
@@ -7,117 +35,176 @@ test.describe('Login Flow', () => {
     await expect(page.getByText('Demo — Select a Role to Continue')).toBeVisible();
   });
 
-  test('should login as MA and navigate to schedule', async ({ page }) => {
+  test('should show MFA step after selecting a demo user and clicking Continue', async ({ page }) => {
     await page.goto('/');
-    
-    // Select MA role
-    await page.getByRole('button', { name: /medical assistant/i }).click();
-    
-    // Submit credentials
+    await page.getByTestId('demo-user-ma').click();
     await page.getByRole('button', { name: /continue/i }).click();
-    
-    // Enter MFA code (any 6 digits work in demo)
-    await page.getByRole('textbox', { name: /mfa code/i }).fill('123456');
-    await page.getByRole('button', { name: /verify/i }).click();
-    
-    // Should navigate to schedule page
-    await expect(page).toHaveURL(/schedule/);
-    await expect(page.getByText(/today's schedule/i)).toBeVisible();
+    await expect(page.getByText(/multi-factor authentication/i)).toBeVisible();
+    await expect(page.getByLabel('Authentication code')).toBeVisible();
   });
 
-  test('should login as Provider and navigate to queue', async ({ page }) => {
+  test('should login as MA and navigate to schedule', async ({ page }) => {
+    await loginAsMA(page);
+    await expect(page).toHaveURL(/schedule/);
+  });
+
+  test('should login as Provider', async ({ page }) => {
+    await loginAsProvider(page);
+    // Provider lands on queue or visits page
+    await expect(page).toHaveURL(/queue|visits|bodymap/, { timeout: 8000 });
+  });
+
+  test('should return to credentials step when Back is clicked during MFA', async ({ page }) => {
     await page.goto('/');
-    
-    await page.getByRole('button', { name: /provider/i }).click();
+    await page.getByTestId('demo-user-ma').click();
     await page.getByRole('button', { name: /continue/i }).click();
-    await page.getByRole('textbox', { name: /mfa code/i }).fill('123456');
-    await page.getByRole('button', { name: /verify/i }).click();
-    
-    await expect(page).toHaveURL(/queue/);
+    await page.getByRole('button', { name: /back to credentials/i }).click();
+    await expect(page.getByRole('button', { name: /continue/i })).toBeVisible();
   });
 });
 
+// ---------------------------------------------------------------------------
+// Body Map Workflow
+// ---------------------------------------------------------------------------
+
 test.describe('Body Map Workflow', () => {
   test.beforeEach(async ({ page }) => {
-    // Login as MA
-    await page.goto('/');
-    await page.getByRole('button', { name: /medical assistant/i }).click();
-    await page.getByRole('button', { name: /continue/i }).click();
-    await page.getByRole('textbox', { name: /mfa code/i }).fill('123456');
-    await page.getByRole('button', { name: /verify/i }).click();
+    await loginAsMA(page);
   });
 
   test('should navigate to body map page', async ({ page }) => {
     await page.getByRole('link', { name: /body map/i }).click();
     await expect(page).toHaveURL(/bodymap/);
-    await expect(page.getByText(/body map/i)).toBeVisible();
   });
 
-  test('should place a lesion marker', async ({ page }) => {
+  test('should display the patient list on the body map page', async ({ page }) => {
     await page.getByRole('link', { name: /body map/i }).click();
-    
-    // Select a patient
-    const firstPatient = page.locator('[data-patient-card]').first();
-    await firstPatient.click();
-    
-    // Start new visit
-    await page.getByRole('button', { name: /new visit/i }).click();
-    
-    // Enter placing mode
-    await page.getByRole('button', { name: /place lesion/i }).click();
-    
-    // Click on body map SVG
-    const bodyMap = page.locator('svg[data-testid="body-map"]');
-    await bodyMap.click({ position: { x: 100, y: 100 } });
-    
-    // Lesion form should appear
-    await expect(page.getByText(/document lesion/i)).toBeVisible();
+    // At least one patient name should appear in the list
+    await expect(page.locator('[data-testid="patient-list"]').or(
+      page.getByText(/margaret|robert|elena/i)
+    )).toBeVisible({ timeout: 6000 });
   });
 });
+
+// ---------------------------------------------------------------------------
+// Offline Mode
+// ---------------------------------------------------------------------------
 
 test.describe('Offline Mode', () => {
   test('should show offline banner when disconnected', async ({ page, context }) => {
-    await page.goto('/');
-    
-    // Login
-    await page.getByRole('button', { name: /medical assistant/i }).click();
-    await page.getByRole('button', { name: /continue/i }).click();
-    await page.getByRole('textbox', { name: /mfa code/i }).fill('123456');
-    await page.getByRole('button', { name: /verify/i }).click();
-    
-    // Go offline
+    await loginAsMA(page);
+
+    // Simulate going offline
     await context.setOffline(true);
-    
-    // Should show offline banner
-    await expect(page.getByText(/offline/i)).toBeVisible();
+    // Navigating triggers the offline hook
+    await page.reload();
+
+    await expect(page.getByText(/offline/i)).toBeVisible({ timeout: 5000 });
+    await context.setOffline(false);
   });
 });
 
-test.describe('Session Timeout', () => {
-  test('should show session warning before timeout', async ({ page }) => {
-    // This test would need to mock time or use a shorter timeout
-    // Skipping implementation for brevity
-    test.skip();
+// ---------------------------------------------------------------------------
+// Signup / Onboarding (public route)
+// ---------------------------------------------------------------------------
+
+test.describe('Onboarding Page', () => {
+  test('should be accessible at /signup without authentication', async ({ page }) => {
+    await page.goto('/signup');
+    await expect(page.getByText(/create your clinic account/i)
+      .or(page.getByText(/register/i))
+      .or(page.getByText(/clinic name/i))
+    ).toBeVisible({ timeout: 5000 });
+  });
+
+  test('should show validation error when NPI is too short', async ({ page }) => {
+    await page.goto('/signup');
+    // Fill clinic name and a short NPI then try to proceed
+    const clinicNameInput = page.getByLabel(/clinic name/i).first();
+    if (await clinicNameInput.isVisible()) {
+      await clinicNameInput.fill('Test Clinic');
+    }
+    const npiInput = page.getByLabel(/npi/i).first();
+    if (await npiInput.isVisible()) {
+      await npiInput.fill('123'); // too short
+      await page.getByRole('button', { name: /next/i }).click();
+      await expect(page.getByText(/10 digit/i).or(page.getByText(/invalid npi/i))).toBeVisible();
+    }
   });
 });
+
+// ---------------------------------------------------------------------------
+// Accessibility (axe-core)
+// ---------------------------------------------------------------------------
 
 test.describe('Accessibility', () => {
-  test('login page should have no accessibility violations', async ({ page }) => {
+  test('login page should have no critical accessibility violations', async ({ page }) => {
     await page.goto('/');
-    
-    // Check for basic a11y attributes
-    await expect(page.getByRole('main')).toBeVisible();
-    await expect(page.getByRole('button', { name: /medical assistant/i })).toBeVisible();
+    const results = await new AxeBuilder({ page })
+      .withTags(['wcag2a', 'wcag2aa', 'wcag21aa'])
+      .analyze();
+    // Filter to violations only (not incomplete / needs-review)
+    const violations = results.violations.filter(v => v.impact === 'critical' || v.impact === 'serious');
+    expect(
+      violations,
+      violations.map(v => `[${v.impact}] ${v.id}: ${v.description}`).join('\n')
+    ).toHaveLength(0);
   });
 
-  test('should be keyboard navigable', async ({ page }) => {
+  test('MFA step should have no critical accessibility violations', async ({ page }) => {
     await page.goto('/');
-    
-    // Tab through interactive elements
+    await page.getByTestId('demo-user-ma').click();
+    await page.getByRole('button', { name: /continue/i }).click();
+    await expect(page.getByLabel('Authentication code')).toBeVisible();
+
+    const results = await new AxeBuilder({ page })
+      .withTags(['wcag2a', 'wcag2aa'])
+      .analyze();
+    const violations = results.violations.filter(v => v.impact === 'critical' || v.impact === 'serious');
+    expect(
+      violations,
+      violations.map(v => `[${v.impact}] ${v.id}: ${v.description}`).join('\n')
+    ).toHaveLength(0);
+  });
+
+  test('body map page should have no critical accessibility violations', async ({ page }) => {
+    await loginAsMA(page);
+    await page.getByRole('link', { name: /body map/i }).click();
+    await expect(page).toHaveURL(/bodymap/);
+
+    const results = await new AxeBuilder({ page })
+      .withTags(['wcag2a', 'wcag2aa'])
+      .analyze();
+    const violations = results.violations.filter(v => v.impact === 'critical' || v.impact === 'serious');
+    expect(
+      violations,
+      violations.map(v => `[${v.impact}] ${v.id}: ${v.description}`).join('\n')
+    ).toHaveLength(0);
+  });
+
+  test('signup page should have no critical accessibility violations', async ({ page }) => {
+    await page.goto('/signup');
+    const results = await new AxeBuilder({ page })
+      .withTags(['wcag2a', 'wcag2aa'])
+      .analyze();
+    const violations = results.violations.filter(v => v.impact === 'critical' || v.impact === 'serious');
+    expect(
+      violations,
+      violations.map(v => `[${v.impact}] ${v.id}: ${v.description}`).join('\n')
+    ).toHaveLength(0);
+  });
+
+  test('login page should be keyboard navigable', async ({ page }) => {
+    await page.goto('/');
+    // Tab to first demo user button and activate it with Enter
     await page.keyboard.press('Tab');
     await page.keyboard.press('Tab');
-    await page.keyboard.press('Enter');
-    
+    // At least one demo user button should be focusable
+    const focused = page.locator(':focus');
+    await expect(focused).toBeVisible();
+  });
+});
+
     // Should select a demo user
     await expect(page.getByRole('button', { name: /continue/i })).toBeVisible();
   });

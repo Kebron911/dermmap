@@ -59,7 +59,7 @@ const seedDatabase = async () => {
         total_lesions: 4,
         biopsies_performed: 2,
         cancers_detected: 1,
-        last_visit: '2024-07-22',
+        last_visit: '2026-02-28',
         tags: ['high_risk', 'family_history']
       },
       {
@@ -79,7 +79,7 @@ const seedDatabase = async () => {
         total_lesions: 3,
         biopsies_performed: 0,
         cancers_detected: 0,
-        last_visit: '2024-02-10',
+        last_visit: '2026-02-15',
         tags: ['routine_screening']
       },
       {
@@ -99,8 +99,8 @@ const seedDatabase = async () => {
         total_lesions: 5,
         biopsies_performed: 1,
         cancers_detected: 0,
-        last_visit: '2024-03-05',
-        next_appointment: '2024-09-05',
+        last_visit: '2026-03-05',
+        next_appointment: '2026-09-05',
         tags: ['high_risk', 'fair_skin']
       }
     ];
@@ -130,7 +130,7 @@ const seedDatabase = async () => {
       {
         visit_id: 'v-001-1',
         patient_id: 'pt-001',
-        visit_date: '2024-01-15T09:00:00Z',
+        visit_date: '2026-02-28T09:00:00Z',
         visit_type: 'routine_screening',
         status: 'locked',
         chief_complaint: 'Annual skin check',
@@ -143,7 +143,7 @@ const seedDatabase = async () => {
       {
         visit_id: 'v-002-1',
         patient_id: 'pt-002',
-        visit_date: '2024-02-10T14:00:00Z',
+        visit_date: '2026-02-15T14:00:00Z',
         visit_type: 'routine_screening',
         status: 'locked',
         chief_complaint: 'Full body skin check',
@@ -156,7 +156,7 @@ const seedDatabase = async () => {
       {
         visit_id: 'v-003-1',
         patient_id: 'pt-003',
-        visit_date: '2024-03-05T10:30:00Z',
+        visit_date: '2026-03-05T10:30:00Z',
         visit_type: 'follow_up',
         status: 'signed',
         chief_complaint: 'Follow-up on back lesion',
@@ -228,9 +228,9 @@ const seedDatabase = async () => {
         lesion_id: 'l-002-1-1',
         visit_id: 'v-002-1',
         patient_id: 'pt-002',
-        body_location_x: 120,
-        body_location_y: 85,
-        body_region: 'right_arm',
+        body_location_x: 162,
+        body_location_y: 160,
+        body_region: 'right_upper_arm',
         body_view: 'anterior',
         size_mm: 4.5,
         shape: 'oval',

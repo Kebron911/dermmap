@@ -40,7 +40,7 @@ export function initSentry() {
 
 export function captureException(error: Error, context?: Record<string, unknown>) {
   if (config.isDemo) {
-    console.error('Demo error (not sent to Sentry):', error, context);
+    if (import.meta.env.DEV) console.error('Demo error (not sent to Sentry):', error, context);
     return;
   }
   Sentry.captureException(error, { extra: context });

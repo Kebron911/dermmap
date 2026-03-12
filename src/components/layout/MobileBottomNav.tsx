@@ -2,6 +2,7 @@ import {
   Calendar, Search, ClipboardList, BarChart3,
   Users, Shield, Settings, Link,
 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { useAppStore } from '../../store/appStore';
 import clsx from 'clsx';
 
@@ -16,16 +17,20 @@ interface NavItem {
 const navItems: NavItem[] = [
   { id: 'schedule', label: 'Schedule', icon: <Calendar size={22} />, roles: ['ma', 'provider'] },
   { id: 'search',   label: 'Patients', icon: <Search size={22} />,   roles: ['ma', 'provider'] },
-  { id: 'queue',    label: 'Queue',    icon: <ClipboardList size={22} />, roles: ['provider'], badge: '3' },
-  { id: 'analytics',label: 'Analytics',icon: <BarChart3 size={22} />, roles: ['admin', 'provider'] },
-  { id: 'users',    label: 'Users',    icon: <Users size={22} />,    roles: ['admin'] },
-  { id: 'audit',    label: 'Audit',    icon: <Shield size={22} />,   roles: ['admin'] },
-  { id: 'ehr',      label: 'EHR',      icon: <Link size={22} />,     roles: ['admin'] },
-  { id: 'settings', label: 'Settings', icon: <Settings size={22} />, roles: ['admin', 'provider', 'ma'] },
+  { id: 'queue',    label: 'Queue',    icon: <ClipboardList size={22} />, roles: ['provider'] },
+  { id: 'analytics',label: 'Analytics',icon: <BarChart3 size={22} />, roles: ['admin', 'manager', 'provider'] },
+  { id: 'users',    label: 'Users',    icon: <Users size={22} />,    roles: ['admin', 'manager'] },
+  { id: 'audit',    label: 'Audit',    icon: <Shield size={22} />,   roles: ['admin', 'manager'] },
+  { id: 'ehr',      label: 'EHR',      icon: <Link size={22} />,     roles: ['admin', 'manager'] },
+  { id: 'settings', label: 'Settings', icon: <Settings size={22} />, roles: ['admin', 'manager', 'provider', 'ma'] },
 ];
 
 export function MobileBottomNav() {
-  const { currentUser, currentPage, setCurrentPage } = useAppStore();
+  const { currentUser, currentPage } = useAppStore();
+  const navigate = useNavigate();
+  const pendingQueueCount = useAppStore(s =>
+    s.patients.reduce((n, p) => n + (p.visits ?? []).filter(v => v.status === 'pending_review').length, 0)
+  );
   if (!currentUser) return null;
 
   const role = currentUser.role;
@@ -38,7 +43,7 @@ export function MobileBottomNav() {
         return (
           <button
             key={item.id}
-            onClick={() => setCurrentPage(item.id)}
+            onClick={() => navigate(`/${item.id}`)}
             className={clsx(
               'flex-1 flex flex-col items-center justify-center pt-2 pb-3 gap-0.5 relative transition-colors',
               isActive ? 'text-teal-600' : 'text-slate-400'
@@ -46,9 +51,9 @@ export function MobileBottomNav() {
           >
             {item.icon}
             <span className="text-[10px] font-medium leading-tight">{item.label}</span>
-            {item.badge && (
+            {item.id === 'queue' && pendingQueueCount > 0 && (
               <span className="absolute top-1.5 right-1/4 bg-red-500 text-white text-[9px] font-bold w-4 h-4 rounded-full flex items-center justify-center">
-                {item.badge}
+                {pendingQueueCount}
               </span>
             )}
             {isActive && (

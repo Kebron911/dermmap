@@ -69,6 +69,23 @@ export function AuditLogPage() {
 
   useEffect(() => { loadEntries(); }, []);
 
+  const handleExportCSV = () => {
+    const headers = ['Timestamp', 'User', 'Role', 'Action', 'Resource Type', 'Resource ID', 'Details'];
+    const rows = filtered.map(e => [
+      e.timestamp, e.user_name, e.user_role, e.action_type, e.resource_type, e.resource_id, e.details,
+    ]);
+    const csv = [headers, ...rows]
+      .map(r => r.map(v => `"${(v ?? '').toString().replace(/"/g, '""')}"`).join(','))
+      .join('\n');
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `audit-log-${new Date().toISOString().split('T')[0]}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
   const filtered = useMemo(() => entries.filter((entry) => {
     const matchSearch = search === '' || [
       entry.user_name, entry.details, entry.resource_type, entry.resource_id
@@ -98,7 +115,7 @@ export function AuditLogPage() {
             <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
             Refresh
           </button>
-          <button className="btn-primary text-sm">
+          <button className="btn-primary text-sm" onClick={handleExportCSV}>
             <Download size={14} />
             Export CSV
           </button>

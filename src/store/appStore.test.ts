@@ -37,12 +37,14 @@ vi.mock('../services/indexedDB', () => ({
     saveVisits: vi.fn().mockResolvedValue(undefined),
     saveLesions: vi.fn().mockResolvedValue(undefined),
     addPendingChange: vi.fn().mockResolvedValue(undefined),
+    clearAll: vi.fn().mockResolvedValue(undefined),
   },
 }));
 
 vi.mock('../services/syncService', () => ({
   default: {
     queueChange: vi.fn().mockResolvedValue(undefined),
+    destroy: vi.fn(),
   },
 }));
 

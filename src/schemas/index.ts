@@ -4,7 +4,7 @@ import { z } from 'zod';
 // Shared enums as Zod schemas
 // ---------------------------------------------------------------------------
 
-export const UserRoleSchema = z.enum(['ma', 'provider', 'admin']);
+export const UserRoleSchema = z.enum(['ma', 'provider', 'admin', 'manager']);
 export const FitzpatrickTypeSchema = z.enum(['I', 'II', 'III', 'IV', 'V', 'VI']);
 export const VisitStatusSchema = z.enum(['in_progress', 'pending_review', 'signed', 'locked']);
 export const LesionActionSchema = z.enum([

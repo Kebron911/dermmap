@@ -20,14 +20,21 @@ const statusLabels: Record<string, string> = {
 };
 
 export function SchedulePage() {
-  const { currentUser, patients, setSelectedPatient, setCurrentVisit, setCurrentPage, startNewVisit, ehrSynced } = useAppStore();
+  const { currentUser, patients: allPatients, setSelectedPatient, setCurrentVisit, setCurrentPage, startNewVisit, ehrSynced, selectedLocation } = useAppStore();
   const today = format(new Date(), 'EEEE, MMMM d, yyyy');
   const todayStr = format(new Date(), 'yyyy-MM-dd');
+  const hour = new Date().getHours();
+  const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
+
+  // Filter patients by selected location
+  const patients = useMemo(() =>
+    selectedLocation ? allPatients.filter(p => p.location_id === selectedLocation) : allPatients,
+    [allPatients, selectedLocation]);
 
   // Derive today's appointments from the patients store; fall back to demo data
   const appointments = useMemo(() => {
     const fromStore = patients.flatMap(p =>
-      p.visits
+      (p.visits ?? [])
         .filter(v => v.visit_date.startsWith(todayStr))
         .map(v => ({ time: format(new Date(v.created_at || v.visit_date), 'h:mm a'), patient: p, reason: 'Dermatology visit', status: v.status }))
     ).sort((a, b) => a.time.localeCompare(b.time));
@@ -39,11 +46,11 @@ export function SchedulePage() {
 
   // Compute today-specific stats from the patients store
   const todayVisits = useMemo(() =>
-    patients.flatMap(p => p.visits.filter(v => v.visit_date.startsWith(todayStr))),
+    patients.flatMap(p => (p.visits ?? []).filter(v => v.visit_date.startsWith(todayStr))),
     [patients, todayStr]);
 
   const completedToday = todayVisits.filter(v => v.status === 'locked' || v.status === 'signed').length;
-  const photoCountToday = todayVisits.reduce((acc, v) => acc + v.lesions.reduce((s, l) => s + l.photos.length, 0), 0);
+  const photoCountToday = todayVisits.reduce((acc, v) => acc + (v.lesions ?? []).reduce((s, l) => s + (l.photos ?? []).length, 0), 0);
   const docTimes = todayVisits.map(v => v.documentation_time_sec).filter((t): t is number => t != null);
   const avgDocTimeStr = docTimes.length
     ? `${(docTimes.reduce((a, b) => a + b, 0) / docTimes.length).toFixed(1)}s`
@@ -52,10 +59,10 @@ export function SchedulePage() {
   // Compute this-week stats from the patients store
   const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
   const weekVisits = useMemo(() =>
-    patients.flatMap(p => p.visits.filter(v => v.visit_date >= weekAgo)),
+    patients.flatMap(p => (p.visits ?? []).filter(v => v.visit_date >= weekAgo)),
     [patients, weekAgo]);
-  const weekPhotos = weekVisits.reduce((acc, v) => acc + v.lesions.reduce((s, l) => s + l.photos.length, 0), 0);
-  const weekBiopsies = weekVisits.reduce((acc, v) => acc + v.lesions.filter(l => l.action === 'biopsy_scheduled' || l.action === 'biopsy_performed').length, 0);
+  const weekPhotos = weekVisits.reduce((acc, v) => acc + (v.lesions ?? []).reduce((s, l) => s + (l.photos ?? []).length, 0), 0);
+  const weekBiopsies = weekVisits.reduce((acc, v) => acc + (v.lesions ?? []).filter(l => l.action === 'biopsy_scheduled' || l.action === 'biopsy_performed').length, 0);
   const weekDocTimes = weekVisits.map(v => v.documentation_time_sec).filter((t): t is number => t != null);
   const weekAvgDocStr = weekDocTimes.length
     ? `${(weekDocTimes.reduce((a, b) => a + b, 0) / weekDocTimes.length).toFixed(1)}s`
@@ -88,7 +95,7 @@ export function SchedulePage() {
       <div className="mb-5">
         <div className="flex items-start justify-between gap-3">
           <div>
-            <h1 className="text-xl md:text-2xl font-bold text-slate-900">Good morning, {currentUser?.name.split(' ')[0]}</h1>
+            <h1 className="text-xl md:text-2xl font-bold text-slate-900">{greeting}, {currentUser?.name.split(' ')[0]}</h1>
             <p className="text-slate-500 text-sm mt-0.5">{today}</p>
           </div>
           {ehrSynced && (
@@ -251,7 +258,10 @@ export function SchedulePage() {
                 <Users size={16} />
                 Search Patients
               </button>
-              <button className="w-full flex items-center gap-3 px-3 py-2.5 bg-slate-50 hover:bg-slate-100 rounded-lg text-sm text-slate-600 font-medium transition-colors">
+              <button
+                onClick={() => setCurrentPage('reports')}
+                className="w-full flex items-center gap-3 px-3 py-2.5 bg-slate-50 hover:bg-slate-100 rounded-lg text-sm text-slate-600 font-medium transition-colors"
+              >
                 <FileText size={16} />
                 Generate Reports
               </button>

@@ -1,4 +1,5 @@
 import { render, screen } from '@testing-library/react';
+import { MemoryRouter } from 'react-router-dom';
 import { describe, it, expect, vi } from 'vitest';
 import { AppShell } from './AppShell';
 
@@ -13,9 +14,11 @@ vi.mock('./OfflineBanner', () => ({
 describe('AppShell', () => {
   it('renders children and global shell elements', () => {
     render(
-      <AppShell>
-        <div>Shell Content</div>
-      </AppShell>
+      <MemoryRouter>
+        <AppShell>
+          <div>Shell Content</div>
+        </AppShell>
+      </MemoryRouter>
     );
 
     expect(screen.getByText('DEMO — SYNTHETIC DATA — NOT FOR CLINICAL USE')).toBeInTheDocument();

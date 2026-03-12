@@ -8,12 +8,14 @@ const roleColors = {
   ma: { bg: 'bg-sky-50', border: 'border-sky-200', icon: 'bg-sky-100 text-sky-700', badge: 'text-sky-700' },
   provider: { bg: 'bg-teal-50', border: 'border-teal-200', icon: 'bg-teal-100 text-teal-700', badge: 'text-teal-700' },
   admin: { bg: 'bg-violet-50', border: 'border-violet-200', icon: 'bg-violet-100 text-violet-700', badge: 'text-violet-700' },
+  manager: { bg: 'bg-violet-50', border: 'border-violet-200', icon: 'bg-violet-100 text-violet-700', badge: 'text-violet-700' },
 };
 
 const roleIcons = {
   ma: '🩺',
   provider: '👨‍⚕️',
   admin: '⚙️',
+  manager: '⚙️',
 };
 
 export function LoginScreen() {
@@ -107,6 +109,7 @@ export function LoginScreen() {
               return (
                 <button
                   key={user.id}
+                  data-testid={`demo-user-${user.role}`}
                   onClick={() => handleDemoLogin(user.id)}
                   className={`w-full text-left p-3 rounded-lg border transition-all duration-150 ${
                     isSelected
@@ -195,6 +198,7 @@ export function LoginScreen() {
                 </p>
                 <input
                   type="text"
+                  aria-label="Authentication code"
                   className="input text-center text-2xl tracking-widest font-mono"
                   placeholder="000000"
                   maxLength={6}
@@ -249,6 +253,15 @@ export function LoginScreen() {
         <p className="text-center text-xs text-slate-500 mt-4">
           Session timeout: 5 min (mobile) · 15 min (web) · MFA required
         </p>
+
+        {!config.isDemo && (
+          <p className="text-center text-xs text-slate-400 mt-3">
+            New clinic?{' '}
+            <a href="/signup" className="text-teal-400 hover:text-teal-300 underline underline-offset-2">
+              Create your account
+            </a>
+          </p>
+        )}
       </div>
     </div>
   );

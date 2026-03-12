@@ -3,10 +3,10 @@ import {
   LogOut, BarChart3, ClipboardList, Link, Shield,
   Stethoscope, ChevronRight, FileText, Target, MapPin
 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { useAppStore } from '../../store/appStore';
 import { OfflineStatusDot } from './OfflineBanner';
 import { LocationSelector, CLINIC_LOCATIONS } from './LocationSelector';
-import { useState } from 'react';
 import clsx from 'clsx';
 
 interface NavItem {
@@ -35,61 +35,65 @@ const navItems: NavItem[] = [
     label: 'Visit Queue',
     icon: <ClipboardList size={18} />,
     roles: ['provider'],
-    badge: '3',
   },
   {
     id: 'analytics',
     label: 'Analytics',
     icon: <BarChart3 size={18} />,
-    roles: ['admin', 'provider'],
+    roles: ['admin', 'manager', 'provider'],
   },
   {
     id: 'providers',
     label: 'Provider Dashboard',
     icon: <Stethoscope size={18} />,
-    roles: ['admin', 'provider'],
+    roles: ['admin', 'manager', 'provider'],
   },
   {
     id: 'quality',
     label: 'Quality Metrics',
     icon: <Target size={18} />,
-    roles: ['admin', 'provider'],
+    roles: ['admin', 'manager', 'provider'],
   },
   {
     id: 'reports',
     label: 'Report Builder',
     icon: <FileText size={18} />,
-    roles: ['admin'],
+    roles: ['admin', 'manager', 'ma', 'provider'],
   },
   {
     id: 'users',
     label: 'User Management',
     icon: <Users size={18} />,
-    roles: ['admin'],
+    roles: ['admin', 'manager'],
   },
   {
     id: 'audit',
     label: 'Audit Log',
     icon: <Shield size={18} />,
-    roles: ['admin'],
+    roles: ['admin', 'manager'],
   },
   {
     id: 'ehr',
     label: 'EHR Integration',
     icon: <Link size={18} />,
-    roles: ['admin'],
+    roles: ['admin', 'manager'],
   },
   {
     id: 'settings',
     label: 'Settings',
     icon: <Settings size={18} />,
-    roles: ['admin', 'provider', 'ma'],
+    roles: ['admin', 'manager', 'provider', 'ma'],
   },
 ];
 
 export function Sidebar() {
-  const { currentUser, logout, currentPage, setCurrentPage } = useAppStore();
-  const [selectedLocation, setSelectedLocation] = useState<string | null>(null);
+  const { currentUser, logout, currentPage } = useAppStore();
+  const navigate = useNavigate();
+  const selectedLocation = useAppStore(s => s.selectedLocation);
+  const setSelectedLocation = useAppStore(s => s.setSelectedLocation);
+  const pendingQueueCount = useAppStore(s =>
+    s.patients.reduce((n, p) => n + (p.visits ?? []).filter(v => v.status === 'pending_review').length, 0)
+  );
   if (!currentUser) return null;
 
   const role = currentUser.role;
@@ -99,12 +103,14 @@ export function Sidebar() {
     ma: 'Medical Assistant',
     provider: 'Provider',
     admin: 'Practice Manager',
+    manager: 'Practice Manager',
   }[role];
 
   const roleColor = {
     ma: 'bg-sky-100 text-sky-700',
     provider: 'bg-teal-100 text-teal-700',
     admin: 'bg-violet-100 text-violet-700',
+    manager: 'bg-violet-100 text-violet-700',
   }[role];
 
   return (
@@ -153,7 +159,7 @@ export function Sidebar() {
           return (
             <button
               key={item.id}
-              onClick={() => setCurrentPage(item.id)}
+              onClick={() => navigate(`/${item.id}`)}
               className={clsx(
                 'w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-100',
                 isActive
@@ -165,9 +171,9 @@ export function Sidebar() {
                 {item.icon}
               </span>
               <span className="flex-1 text-left">{item.label}</span>
-              {item.badge && (
+              {item.id === 'queue' && pendingQueueCount > 0 && (
                 <span className="bg-red-500 text-white text-xs font-bold w-5 h-5 rounded-full flex items-center justify-center">
-                  {item.badge}
+                  {pendingQueueCount}
                 </span>
               )}
               {isActive && <ChevronRight size={14} className="text-teal-400" />}

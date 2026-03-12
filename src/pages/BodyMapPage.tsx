@@ -13,7 +13,8 @@ import { VisitSignOffModal } from '../components/visit/VisitSignOffModal';
 import { Lesion, Visit, BiopsyResult, VisitStatus } from '../types';
 import { format, parseISO, differenceInYears } from 'date-fns';
 import { getLesionColor, getLesionLabel } from '../components/bodymap/BodyMapSVG';
-import { exportVisitPDF } from '../utils/pdfExport';
+import { exportVisitPDF, resolvePhotoDataUris } from '../utils/pdfExport';
+import { auditLogger } from '../services/auditLogger';
 import { riskColor } from '../utils/riskScoring';
 import clsx from 'clsx';
 
@@ -137,7 +138,15 @@ export function BodyMapPage() {
     const visit = activeVisit || selectedPatient.visits.at(-1)!;
     setExportingPDF(true);
     try {
-      await exportVisitPDF(selectedPatient, visit);
+      const token = sessionStorage.getItem('auth_token') ?? '';
+      const photoDataMap = await resolvePhotoDataUris(visit, token);
+      await exportVisitPDF(selectedPatient, visit, undefined, photoDataMap);
+      auditLogger.log(
+        'export',
+        'visit',
+        visit.visit_id,
+        `Clinical PDF exported for patient ${selectedPatient.patient_id} — ${visit.lesions.length} lesion(s)`,
+      );
     } finally {
       setExportingPDF(false);
     }

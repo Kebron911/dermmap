@@ -9,7 +9,8 @@ export const authenticateToken = (req, res, next) => {
   }
   
   try {
-    const user = jwt.verify(token, process.env.JWT_SECRET);
+    // Constrain to HS256 to prevent alg:none and algorithm-confusion attacks
+    const user = jwt.verify(token, process.env.JWT_SECRET, { algorithms: ['HS256'] });
     req.user = user;
     next();
   } catch (error) {

@@ -24,8 +24,8 @@ Full‐body dermatology lesion mapping and documentation platform with enterpris
 - Database: PostgreSQL on port 54320 (isolated from other PostgreSQL instances)
 - Demo credentials: alex.ma@dermmap.com / demo123 (MA), sarah.dr@dermmap.com / demo123 (Provider)
 
-📖 **Full Docker documentation:** [DOCKER.md](DOCKER.md)  
-🧪 **Integration testing guide:** [INTEGRATION_TESTING.md](INTEGRATION_TESTING.md)
+📖 **Full Docker documentation:** [DOCKER.md](docs/DOCKER.md)  
+🧪 **Integration testing guide:** [INTEGRATION_TESTING.md](docs/INTEGRATION_TESTING.md)
 
 ---
 
@@ -62,12 +62,12 @@ npm run build
 
 **Solutions**:
 1. ✅ **Recommended**: Use Docker (see above) for full-stack development
-2. 📖 See [LOCAL_DEV_GUIDE.md](LOCAL_DEV_GUIDE.md) for:
+2. 📖 See [LOCAL_DEV_GUIDE.md](docs/LOCAL_DEV_GUIDE.md) for:
    - Frontend-only development (no backend needed)
    - Manual backend setup (PostgreSQL + Express)
    - Troubleshooting connection errors
 
-📖 **Full-stack setup (PostgreSQL + Backend):** [README_FULLSTACK.md](README_FULLSTACK.md)
+📖 **Full-stack setup (PostgreSQL + Backend):** [README_FULLSTACK.md](docs/README_FULLSTACK.md)
 
 ---
 
@@ -83,8 +83,8 @@ npm run build
 ### Enterprise Features
 - ✅ **Offline Mode** — Full offline support with automatic sync
 - ✅ **Session Management** — 15-minute timeout with warning
-- ✅ **Audit Logging** — HIPAA-compliant activity tracking
-- ✅ **Error Reporting** — Sentry integration for production
+- ✅ **Audit Logging** — HIPAA-compliant activity tracking  - ✅ **PDF Export** — Per-patient clinical PDF with body map diagram
+  - ✅ **Clinic Onboarding** — HIPAA BAA e-signature signup flow- ✅ **Error Reporting** — Sentry integration for production
 - ✅ **Analytics** — Google Analytics 4 with PII anonymization
 - ✅ **PWA Support** — Service worker for app-like experience
 - ✅ **Form Validation** — Zod schemas with real-time feedback
@@ -157,6 +157,9 @@ src/
 └── main.tsx           # App entry point
 
 e2e/                   # Playwright E2E tests
+docs/                  # Documentation
+├── business/          # Business & sales documents (.docx)
+website/               # Marketing website
 ```
 
 ## Key Services
@@ -238,9 +241,9 @@ npm test              # Run with coverage
 npm run test:watch    # Watch mode
 ```
 
-- **Coverage**: 98% statements, 89% branches, 81% functions
+- **Coverage**: Measured across all `src/` files (see `vite.config.ts` for thresholds)
 - **Framework**: Vitest + Testing Library
-- **Files**: 8 test files, 25 tests
+- **Files**: 8 test files, 25+ tests
 
 ### E2E Tests
 ```bash
@@ -255,7 +258,7 @@ npm run test:e2e:headed   # Watch in browser
 
 ## Deployment
 
-See [DEPLOYMENT.md](./DEPLOYMENT.md) for detailed production deployment guide.
+See [DEPLOYMENT.md](docs/DEPLOYMENT.md) for detailed production deployment guide.
 
 ### Quick Deploy Options
 

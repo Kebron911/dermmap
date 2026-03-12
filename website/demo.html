@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DermMap — Request a Demo</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar">
+        <div class="nav-container">
+            <div class="nav-logo">
+                DermMap
+                <span class="logo-pulse"></span>
+            </div>
+            <ul class="nav-menu" id="mobile-menu">
+                <li class="nav-item">
+                    <a href="index.html" class="nav-link">Home</a>
+                </li>
+                <li class="nav-item">
+                    <a href="features.html" class="nav-link">Features</a>
+                </li>
+                <li class="nav-item">
+                    <a href="security.html" class="nav-link">Security</a>
+                </li>
+                <li class="nav-item">
+                    <a href="pricing.html" class="nav-link">Pricing</a>
+                </li>
+                <li class="nav-item">
+                    <a href="demo.html" class="nav-cta active">Demo</a>
+                </li>
+            </ul>
+            <button class="mobile-menu-btn" id="mobile-menu-btn">
+                <span></span>
+                <span></span>
+                <span></span>
+            </button>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section class="hero-demo">
+        <div class="hero-container">
+            <div class="hero-content">
+                <span class="section-label">Request a demo</span>
+                <h1>See it in 20 minutes.</h1>
+                <p class="hero-subheadline">A DermMap demo is a live walkthrough — no slides, no decks. You'll see the actual app, running a real clinic scenario, timed.</p>
+
+                <div class="expect-list">
+                    <div class="expect-item">
+                        <span class="checkmark">✓</span>
+                        <span>Live app — not a slide deck</span>
+                    </div>
+                    <div class="expect-item">
+                        <span class="checkmark">✓</span>
+                        <span>Real clinic scenario, real data</span>
+                    </div>
+                    <div class="expect-item">
+                        <span class="checkmark">✓</span>
+                        <span>The 8-second workflow, timed on screen</span>
+                    </div>
+                    <div class="expect-item">
+                        <span class="checkmark">✓</span>
+                        <span>Q&A time built in</span>
+                    </div>
+                    <div class="expect-item">
+                        <span class="checkmark">✓</span>
+                        <span>Zero sales pressure — if it's not a fit, we'll tell you</span>
+                    </div>
+                </div>
+
+                <div class="social-proof">
+                    <p class="proof-text">Trusted by dermatology practices across the United States</p>
+                    <blockquote class="demo-quote">
+                        <p>"By the end of the 20 minutes, I knew it would work in our clinic."</p>
+                        <footer>— Practice Owner</footer>
+                    </blockquote>
+                </div>
+            </div>
+
+            <div class="hero-form">
+                <form id="demo-form" class="demo-form-card">
+                    <h2>Schedule your demo</h2>
+
+                    <div class="form-group">
+                        <label for="first-name">First name</label>
+                        <input type="text" id="first-name" name="first_name" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="last-name">Last name</label>
+                        <input type="text" id="last-name" name="last_name" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="practice-name">Practice name</label>
+                        <input type="text" id="practice-name" name="practice_name" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="email">Email</label>
+                        <input type="email" id="email" name="email" placeholder="your@practice.com" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="phone">Phone</label>
+                        <input type="tel" id="phone" name="phone">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="ehr-system">EHR system</label>
+                        <select id="ehr-system" name="ehr_system" required>
+                            <option value="">Select your EHR</option>
+                            <option value="modmed">ModMed EMA</option>
+                            <option value="epic">Epic</option>
+                            <option value="athena">Athenahealth</option>
+                            <option value="cerner">Cerner / Oracle Health</option>
+                            <option value="eclinical">eClinicalWorks</option>
+                            <option value="other">Other</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="practice-size">Practice size</label>
+                        <select id="practice-size" name="practice_size" required>
+                            <option value="">Select your practice size</option>
+                            <option value="solo">Solo (1 provider)</option>
+                            <option value="small">Small (2–5 providers)</option>
+                            <option value="midsize">Mid-size (6–15 providers)</option>
+                            <option value="large">Large (15+ providers / Multi-location)</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="best-time">Best time to reach you</label>
+                        <select id="best-time" name="best_time">
+                            <option value="">Select preferred time</option>
+                            <option value="morning">Morning (8am–12pm)</option>
+                            <option value="afternoon">Afternoon (12pm–5pm)</option>
+                            <option value="anytime">Any time works</option>
+                        </select>
+                    </div>
+
+                    <button type="submit" class="btn-submit">Request My Demo →</button>
+
+                    <p class="form-footnote">Usually responds within 1 business day. No sales pressure.</p>
+                </form>
+
+                <div id="form-success" class="form-success" style="display: none;">
+                    <h2>You're all set!</h2>
+                    <p>Thanks for requesting a demo. We'll reach out within 1 business day to schedule your walkthrough.</p>
+                    <p>In the meantime, <a href="features.html" class="link-explore">explore the features →</a></p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- What You'll See Section -->
+    <section class="what-youll-see">
+        <div class="container">
+            <h2>What you'll see</h2>
+            <div class="cards-grid">
+                <div class="feature-card reveal">
+                    <div class="card-icon icon-workflow"></div>
+                    <h3>The 8-second workflow</h3>
+                    <p>Watch a Medical Assistant document a real lesion, start to finish, in under 10 seconds.</p>
+                </div>
+                <div class="feature-card reveal">
+                    <div class="card-icon icon-bodymap"></div>
+                    <h3>The longitudinal view</h3>
+                    <p>See how every lesion a patient has ever had lives on one body map — photo history, side-by-side comparison, status tracking.</p>
+                </div>
+                <div class="feature-card reveal">
+                    <div class="card-icon icon-dashboard"></div>
+                    <h3>The practice manager view</h3>
+                    <p>Usage dashboard, audit log, onboarding in 48 hours.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- FAQ Section -->
+    <section class="faq-section">
+        <div class="container">
+            <h2>Common questions before the demo</h2>
+            <div class="faq-list">
+                <details class="faq-item">
+                    <summary>How long is the demo?</summary>
+                    <div class="faq-content">
+                        <p>20 minutes. We keep it tight on purpose — 12 minutes of walkthrough, 8 minutes of Q&A.</p>
+                    </div>
+                </details>
+
+                <details class="faq-item">
+                    <summary>Who should attend from our practice?</summary>
+                    <div class="faq-content">
+                        <p>Whoever makes software decisions — often a physician-owner or practice manager. Sometimes an MA too, since they're the primary user. We'll accommodate any setup.</p>
+                    </div>
+                </details>
+
+                <details class="faq-item">
+                    <summary>Do we need to prepare anything?</summary>
+                    <div class="faq-content">
+                        <p>Nothing. We run a pre-built clinic scenario — you just need to show up.</p>
+                    </div>
+                </details>
+
+                <details class="faq-item">
+                    <summary>Is this a sales call?</summary>
+                    <div class="faq-content">
+                        <p>It's a product walkthrough. We'll tell you honestly if DermMap isn't the right fit for your practice — even if that means a "no" recommendation.</p>
+                    </div>
+                </details>
+
+                <details class="faq-item">
+                    <summary>What happens after the demo?</summary>
+                    <div class="faq-content">
+                        <p>If it's a fit, we'll walk you through a trial setup. Most practices are live within 48 hours.</p>
+                    </div>
+                </details>
+            </div>
+        </div>
+    </section>
+
+    <!-- Not Ready Section -->
+    <section class="not-ready-section">
+        <div class="container">
+            <h2>Not ready for a demo yet?</h2>
+            <div class="cta-cards">
+                <a href="features.html" class="cta-card">
+                    <h3>Explore Features →</h3>
+                    <p>See every capability in detail</p>
+                </a>
+                <a href="security.html" class="cta-card">
+                    <h3>Review Security Docs →</h3>
+                    <p>Full HIPAA compliance breakdown</p>
+                </a>
+                <a href="pricing.html" class="cta-card">
+                    <h3>See Pricing →</h3>
+                    <p>Straightforward practice-based pricing</p>
+                </a>
+            </div>
+        </div>
+    </section>
+
+    <!-- Mobile Sticky CTA -->
+    <div id="mobile-cta" class="mobile-cta" style="display: none;">
+        <a href="#demo-form" class="mobile-cta-btn">↑ Back to form</a>
+    </div>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="footer-container">
+            <div class="footer-main">
+                <div class="footer-logo">
+                    <h3>DermMap</h3>
+                    <p>Lesion documentation that actually fits in an exam room.</p>
+                </div>
+                <div class="footer-links">
+                    <a href="features.html">Features</a>
+                    <a href="security.html">Security</a>
+                    <a href="pricing.html">Pricing</a>
+                    <a href="demo.html">Demo</a>
+                </div>
+                <div class="footer-badge">
+                    <span class="hipaa-badge">HIPAA Compliant</span>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2025 DermMap. All rights reserved.</p>
+            </div>
+        </div>
+    </footer>
+
+    <script src="js/main.js"></script>
+    <script>
+        // Demo page form handling
+        const demoForm = document.getElementById('demo-form');
+        const formSuccess = document.getElementById('form-success');
+
+        if (demoForm) {
+            demoForm.addEventListener('submit', function(e) {
+                e.preventDefault();
+
+                // Collect form data
+                const formData = {
+                    first_name: document.getElementById('first-name').value,
+                    last_name: document.getElementById('last-name').value,
+                    practice_name: document.getElementById('practice-name').value,
+                    email: document.getElementById('email').value,
+                    phone: document.getElementById('phone').value,
+                    ehr_system: document.getElementById('ehr-system').value,
+                    practice_size: document.getElementById('practice-size').value,
+                    best_time: document.getElementById('best-time').value
+                };
+
+                // In a real implementation, this would POST to a backend
+                console.log('Demo request submitted:', formData);
+
+                // Show success message
+                demoForm.style.display = 'none';
+                formSuccess.style.display = 'block';
+
+                // Scroll to success message
+                formSuccess.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            });
+        }
+
+        // Mobile sticky CTA logic
+        const mobileCta = document.getElementById('mobile-cta');
+        const demoFormElement = document.getElementById('demo-form');
+
+        window.addEventListener('scroll', function() {
+            if (mobileCta && demoFormElement) {
+                const formRect = demoFormElement.getBoundingClientRect();
+                // Show mobile CTA if form is out of view
+                if (formRect.bottom < 0 || formRect.top > window.innerHeight) {
+                    mobileCta.style.display = 'block';
+                } else {
+                    mobileCta.style.display = 'none';
+                }
+            }
+        });
+
+        // Smooth scroll for mobile CTA
+        const mobileCTABtn = document.querySelector('.mobile-cta-btn');
+        if (mobileCTABtn) {
+            mobileCTABtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                demoFormElement.scrollIntoView({ behavior: 'smooth' });
+            });
+        }
+
+        // Intersection Observer for card reveals
+        const observerOptions = {
+            threshold: 0.1,
+            rootMargin: '0px 0px -100px 0px'
+        };
+
+        const observer = new IntersectionObserver(function(entries) {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('visible');
+                    observer.unobserve(entry.target);
+                }
+            });
+        }, observerOptions);
+
+        document.querySelectorAll('.reveal').forEach(el => {
+            observer.observe(el);
+        });
+    </script>
+</body>
+</html>

@@ -2,7 +2,7 @@ import { config } from '../config';
 import { api } from './api';
 import { logger } from './logger';
 import type { Patient, Visit, Lesion } from '../types';
-import { SYNTHETIC_PATIENTS } from '../data/syntheticData';
+import { ALL_PATIENTS } from '../data/syntheticData';
 import { db } from './db';
 
 // ---------------------------------------------------------------------------
@@ -15,10 +15,10 @@ export const patientService = {
     if (config.isDemo) {
       let patients = await db.patients.getAll();
       if (patients.length === 0) {
-        for (const p of SYNTHETIC_PATIENTS) {
+        for (const p of ALL_PATIENTS) {
           await db.patients.put(p);
         }
-        patients = SYNTHETIC_PATIENTS;
+        patients = ALL_PATIENTS;
       }
       return patients;
     }

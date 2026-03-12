@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DermMap — Features</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar">
+        <div class="nav-container">
+            <div class="nav-logo">
+                DermMap
+                <span class="logo-pulse"></span>
+            </div>
+            <button id="mobile-menu-btn" class="mobile-menu-btn" aria-label="Toggle menu">
+                <span></span>
+                <span></span>
+                <span></span>
+            </button>
+            <ul id="mobile-menu" class="nav-menu">
+                <li class="nav-item">
+                    <a href="index.html" class="nav-link">Home</a>
+                </li>
+                <li class="nav-item">
+                    <a href="features.html" class="nav-link active">Features</a>
+                </li>
+                <li class="nav-item">
+                    <a href="security.html" class="nav-link">Security</a>
+                </li>
+                <li class="nav-item">
+                    <a href="pricing.html" class="nav-link">Pricing</a>
+                </li>
+                <li class="nav-item">
+                    <a href="demo.html" class="nav-link nav-link-btn">Demo</a>
+                </li>
+            </ul>
+        </div>
+    </nav>
+
+    <!-- Page Hero -->
+    <section class="hero hero-features">
+        <div class="hero-content">
+            <p class="hero-label">All features</p>
+            <h1 class="hero-title">Everything built for one workflow: dermatology documentation in the exam room.</h1>
+            <p class="hero-subtitle">Ten purpose-built features. Zero unnecessary ones.</p>
+        </div>
+    </section>
+
+    <!-- Features Section 1: Core Documentation -->
+    <section class="features-section">
+        <div class="container">
+            <!-- Feature 1: Anatomical Body Map -->
+            <div class="feature-card reveal" data-delay="0">
+                <div class="feature-visual">
+                    <svg class="feature-icon body-map-icon" viewBox="0 0 100 200" xmlns="http://www.w3.org/2000/svg">
+                        <!-- Head -->
+                        <circle cx="50" cy="25" r="15" fill="none" stroke="currentColor" stroke-width="2"/>
+                        <!-- Neck -->
+                        <line x1="50" y1="40" x2="50" y2="55" stroke="currentColor" stroke-width="2"/>
+                        <!-- Torso -->
+                        <path d="M 35 55 L 30 95 L 35 130 L 50 140 L 65 130 L 70 95 L 65 55 Z" fill="none" stroke="currentColor" stroke-width="2"/>
+                        <!-- Arms -->
+                        <line x1="35" y1="65" x2="15" y2="90" stroke="currentColor" stroke-width="2"/>
+                        <line x1="65" y1="65" x2="85" y2="90" stroke="currentColor" stroke-width="2"/>
+                        <!-- Legs -->
+                        <line x1="40" y1="140" x2="35" y2="180" stroke="currentColor" stroke-width="2"/>
+                        <line x1="60" y1="140" x2="65" y2="180" stroke="currentColor" stroke-width="2"/>
+                        <!-- Marker indicator -->
+                        <circle cx="50" cy="75" r="4" fill="#008B8B" opacity="0.7"/>
+                    </svg>
+                </div>
+                <div class="feature-content">
+                    <h2 class="feature-title">Anatomical Body Map</h2>
+                    <p class="feature-description">
+                        Precise full-body SVG diagram with anterior, posterior, lateral, and head detail views. Tap to place markers on exact lesion locations. Pinch to zoom for precise positioning. Prior visit markers visible in distinct color for easy comparison. New markers pulse to confirm placement, providing instant visual feedback.
+                    </p>
+                    <ul class="feature-highlights">
+                        <li>Multi-view anatomical diagrams</li>
+                        <li>Touch-optimized placement</li>
+                        <li>Pinch-to-zoom controls</li>
+                        <li>Historical marker comparison</li>
+                        <li>Pulse confirmation feedback</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Feature 2: Clinical Photo Capture -->
+            <div class="feature-card reveal feature-reversed" data-delay="100">
+                <div class="feature-visual">
+                    <div class="feature-icon camera-icon">
+                        <div class="camera-lens-outer">
+                            <div class="camera-lens-inner"></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="feature-content">
+                    <h2 class="feature-title">Clinical Photo Capture</h2>
+                    <p class="feature-description">
+                        Camera opens instantly when you place a marker. Circular framing guide ensures consistent composition. Auto-capture triggers when the image is stable and in focus, eliminating manual intervention. Support for multiple photos per marker. Photos attach automatically without manual linking required.
+                    </p>
+                    <ul class="feature-highlights">
+                        <li>Instant camera launch</li>
+                        <li>Circular framing guide</li>
+                        <li>Auto-focus detection</li>
+                        <li>Multi-photo support</li>
+                        <li>Automatic attachment</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Feature 3: Dermoscopy Lens Support -->
+            <div class="feature-card reveal" data-delay="200">
+                <div class="feature-visual">
+                    <div class="feature-icon magnifier-icon">
+                        <div class="magnifier-circle"></div>
+                        <div class="magnifier-handle"></div>
+                    </div>
+                </div>
+                <div class="feature-content">
+                    <h2 class="feature-title">Dermoscopy Lens Support</h2>
+                    <p class="feature-description">
+                        Compatible with industry-standard adapters including DermLite, 3Gen, and Canfield systems. Auto-detects attached lens and automatically adjusts exposure and white balance for optimal image quality. Dermoscopic and clinical photos stored separately with clear labeling for easy reference and comparison.
+                    </p>
+                    <ul class="feature-highlights">
+                        <li>Multi-adapter compatibility</li>
+                        <li>Auto-detection system</li>
+                        <li>Smart exposure adjustment</li>
+                        <li>White balance optimization</li>
+                        <li>Organized photo categorization</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Feature 4: Structured Documentation -->
+            <div class="feature-card reveal feature-reversed" data-delay="300">
+                <div class="feature-visual">
+                    <div class="feature-icon clipboard-icon">
+                        <div class="clipboard-board"></div>
+                        <div class="clipboard-line"></div>
+                        <div class="clipboard-line"></div>
+                        <div class="clipboard-line"></div>
+                    </div>
+                </div>
+                <div class="feature-content">
+                    <h2 class="feature-title">Structured Documentation</h2>
+                    <p class="feature-description">
+                        Bottom sheet interface with quick-tap fields for clinical classification. Includes size (1-6mm+ with custom entry), shape, color, border characteristics, symmetry assessment, and action type selection (monitor, biopsy scheduled, biopsy performed, excision, referral). Features sensible defaults to accelerate documentation. Free-text notes field available for provider-only comments and clinical observations.
+                    </p>
+                    <ul class="feature-highlights">
+                        <li>Quick-tap field selection</li>
+                        <li>Standardized classifications</li>
+                        <li>Custom size entry</li>
+                        <li>Action tracking</li>
+                        <li>Provider notes field</li>
+                        <li>Smart defaults</li>
+                    </ul>
+                    <!-- Mockup of bottom sheet -->
+                    <div class="mockup-bottom-sheet">
+                        <div class="mockup-field">
+                            <label>Size</label>
+                            <div class="mockup-buttons">
+                                <span class="mockup-btn">1-2mm</span>
+                                <span class="mockup-btn active">3-4mm</span>
+                                <span class="mockup-btn">5-6mm+</span>
+                            </div>
+                        </div>
+                        <div class="mockup-field">
+                            <label>Action</label>
+                            <div class="mockup-buttons">
+                                <span class="mockup-btn">Monitor</span>
+                                <span class="mockup-btn active">Biopsy</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Feature 5: Offline Mode -->
+            <div class="feature-card reveal" data-delay="400">
+                <div class="feature-visual">
+                    <div class="feature-icon wifi-off-icon">
+                        <div class="wifi-signal">
+                            <div class="wifi-arc arc-1"></div>
+                            <div class="wifi-arc arc-2"></div>
+                        </div>
+                        <div class="wifi-slash"></div>
+                    </div>
+                </div>
+                <div class="feature-content">
+                    <h2 class="feature-title">Offline Mode</h2>
+                    <p class="feature-description">
+                        Complete offline operation with local AES-256 encryption ensuring all data remains secure even without network connectivity. Mutations are queued automatically and replayed on reconnect with built-in conflict resolution. Offline mode is a first-class feature, not a fallback consideration — exam rooms have unreliable WiFi, and we planned for that.
+                    </p>
+                    <ul class="feature-highlights">
+                        <li>Full offline operation</li>
+                        <li>AES-256 encryption</li>
+                        <li>Automatic queue management</li>
+                        <li>Conflict resolution</li>
+                        <li>Seamless reconnection</li>
+                    </ul>
+                    <div class="feature-callout">
+                        "Exam rooms have bad WiFi. We planned for that."
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Features Section 2: Analysis & Administration -->
+    <section class="features-section features-section-alt">
+        <div class="container">
+            <!-- Feature 6: Longitudinal Lesion Tracking -->
+            <div class="feature-card reveal feature-reversed" data-delay="500">
+                <div class="feature-visual">
+                    <div class="feature-icon timeline-icon">
+                        <div class="timeline-dot dot-1"></div>
+                        <div class="timeline-dot dot-2"></div>
+                        <div class="timeline-dot dot-3"></div>
+                        <div class="timeline-line"></div>
+                    </div>
+                </div>
+                <div class="feature-content">
+                    <h2 class="feature-title">Longitudinal Lesion Tracking</h2>
+                    <p class="feature-description">
+                        Every lesion builds a complete longitudinal history across visits. Access photo carousel showing all images chronologically. Compare images side-by-side across time points. Track structured data changes over time with visual indicators. Integrate biopsy results and pathology notes directly in the lesion record. Color-coded status indicators provide at-a-glance assessment of lesion status.
+                    </p>
+                    <ul class="feature-highlights">
+                        <li>Complete visit history</li>
+                        <li>Photo carousel</li>
+                        <li>Side-by-side comparison</li>
+                        <li>Historical data tracking</li>
+                        <li>Biopsy integration</li>
+                        <li>Status indicators</li>
+                    </ul>
+                    <!-- Timeline mockup -->
+                    <div class="mockup-timeline">
+                        <div class="timeline-visit">
+                            <div class="visit-dot"></div>
+                            <div class="visit-label">Visit 1</div>
+                            <div class="visit-date">6 months ago</div>
+                        </div>
+                        <div class="timeline-connector"></div>
+                        <div class="timeline-visit">
+                            <div class="visit-dot"></div>
+                            <div class="visit-label">Visit 2</div>
+                            <div class="visit-date">3 months ago</div>
+                        </div>
+                        <div class="timeline-connector"></div>
+                        <div class="timeline-visit">
+                            <div class="visit-dot"></div>
+                            <div class="visit-label">Today</div>
+                            <div class="visit-date">Current</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Feature 7: PDF Export -->
+            <div class="feature-card reveal" data-delay="600">
+                <div class="feature-visual">
+                    <div class="feature-icon pdf-icon">
+                        <div class="pdf-document">
+                            <div class="pdf-header">PDF</div>
+                            <div class="pdf-line"></div>
+                            <div class="pdf-line"></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="feature-content">
+                    <h2 class="feature-title">PDF Export</h2>
+                    <p class="feature-description">
+                        One-tap generation of PDF/A-compliant clinical documents suitable for EHR attachment and long-term archival. Documents include patient information, visit date, annotated body map with numbered markers, per-lesion photo grids, structured data summary table, and provider signature line. Typical file size under 5MB. Integrates seamlessly with every major EHR system as a standard document attachment.
+                    </p>
+                    <ul class="feature-highlights">
+                        <li>One-tap PDF generation</li>
+                        <li>PDF/A compliance</li>
+                        <li>Patient information</li>
+                        <li>Annotated body map</li>
+                        <li>Photo grids</li>
+                        <li>Signature line</li>
+                        <li>EHR compatible</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Feature 8: Role-Based Access -->
+            <div class="feature-card reveal feature-reversed" data-delay="700">
+                <div class="feature-visual">
+                    <div class="feature-icon roles-icon">
+                        <div class="role-user"></div>
+                        <div class="role-user"></div>
+                        <div class="role-user"></div>
+                    </div>
+                </div>
+                <div class="feature-content">
+                    <h2 class="feature-title">Role-Based Access</h2>
+                    <p class="feature-description">
+                        Three precisely defined roles — Medical Assistant, Physician, and Practice Manager — each with scoped permissions matching their clinical and administrative responsibilities. No shared logins; each user has individual credentials. Session timeout with biometric or PIN resume capability. Break-glass emergency access available with mandatory justification logging for compliance and accountability.
+                    </p>
+                    <ul class="feature-highlights">
+                        <li>Three defined roles</li>
+                        <li>Scoped permissions</li>
+                        <li>Individual credentials</li>
+                        <li>Session timeout</li>
+                        <li>Biometric resume</li>
+                        <li>Emergency access logging</li>
+                    </ul>
+                    <!-- Role comparison table -->
+                    <div class="mockup-roles-table">
+                        <div class="roles-row roles-header">
+                            <div class="roles-cell">Permission</div>
+                            <div class="roles-cell">MA</div>
+                            <div class="roles-cell">Physician</div>
+                            <div class="roles-cell">Manager</div>
+                        </div>
+                        <div class="roles-row">
+                            <div class="roles-cell">Document Lesion</div>
+                            <div class="roles-cell"><span class="check">✓</span></div>
+                            <div class="roles-cell"><span class="check">✓</span></div>
+                            <div class="roles-cell"><span class="x">✗</span></div>
+                        </div>
+                        <div class="roles-row">
+                            <div class="roles-cell">Add Notes</div>
+                            <div class="roles-cell"><span class="x">✗</span></div>
+                            <div class="roles-cell"><span class="check">✓</span></div>
+                            <div class="roles-cell"><span class="x">✗</span></div>
+                        </div>
+                        <div class="roles-row">
+                            <div class="roles-cell">View Reports</div>
+                            <div class="roles-cell"><span class="x">✗</span></div>
+                            <div class="roles-cell"><span class="check">✓</span></div>
+                            <div class="roles-cell"><span class="check">✓</span></div>
+                        </div>
+                        <div class="roles-row">
+                            <div class="roles-cell">Manage Users</div>
+                            <div class="roles-cell"><span class="x">✗</span></div>
+                            <div class="roles-cell"><span class="x">✗</span></div>
+                            <div class="roles-cell"><span class="check">✓</span></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Feature 9: Audit Log -->
+            <div class="feature-card reveal" data-delay="800">
+                <div class="feature-visual">
+                    <div class="feature-icon log-icon">
+                        <div class="log-entry"></div>
+                        <div class="log-entry"></div>
+                        <div class="log-entry"></div>
+                    </div>
+                </div>
+                <div class="feature-content">
+                    <h2 class="feature-title">Audit Log</h2>
+                    <p class="feature-description">
+                        Immutable, searchable audit log recording every action within the system for compliance and accountability. Logs retained for 6 years meeting regulatory requirements. Exportable to CSV format for integration with compliance workflows. Search by user, date, action type, or affected record for rapid investigation and review.
+                    </p>
+                    <ul class="feature-highlights">
+                        <li>Immutable records</li>
+                        <li>Searchable index</li>
+                        <li>6-year retention</li>
+                        <li>CSV export</li>
+                        <li>Multi-field search</li>
+                        <li>Compliance ready</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Feature 10: Practice Analytics Dashboard -->
+            <div class="feature-card reveal feature-reversed" data-delay="900">
+                <div class="feature-visual">
+                    <div class="feature-icon chart-icon">
+                        <div class="chart-bar bar-1"></div>
+                        <div class="chart-bar bar-2"></div>
+                        <div class="chart-bar bar-3"></div>
+                        <div class="chart-bar bar-4"></div>
+                    </div>
+                </div>
+                <div class="feature-content">
+                    <h2 class="feature-title">Practice Analytics Dashboard</h2>
+                    <p class="feature-description">
+                        Comprehensive analytics dashboard providing visibility into practice productivity and adoption metrics. Track visits per day, week, and month. Monitor average documentation time per visit. Analyze photo utilization patterns. View provider adoption metrics and engagement trends. Built-in ROI calculator converts visit volume and medical assistant hourly cost into quantified time savings and operational benefits.
+                    </p>
+                    <ul class="feature-highlights">
+                        <li>Visit metrics</li>
+                        <li>Time tracking</li>
+                        <li>Photo analytics</li>
+                        <li>Adoption metrics</li>
+                        <li>ROI calculator</li>
+                        <li>Productivity insights</li>
+                    </ul>
+                    <!-- Bar chart mockup -->
+                    <div class="mockup-chart">
+                        <div class="chart-axis">
+                            <div class="chart-bar-group">
+                                <div class="chart-bar-container">
+                                    <div class="chart-bar-fill" style="height: 60%;"></div>
+                                </div>
+                                <div class="chart-label">Mon</div>
+                            </div>
+                            <div class="chart-bar-group">
+                                <div class="chart-bar-container">
+                                    <div class="chart-bar-fill" style="height: 85%;"></div>
+                                </div>
+                                <div class="chart-label">Tue</div>
+                            </div>
+                            <div class="chart-bar-group">
+                                <div class="chart-bar-container">
+                                    <div class="chart-bar-fill" style="height: 75%;"></div>
+                                </div>
+                                <div class="chart-label">Wed</div>
+                            </div>
+                            <div class="chart-bar-group">
+                                <div class="chart-bar-container">
+                                    <div class="chart-bar-fill" style="height: 90%;"></div>
+                                </div>
+                                <div class="chart-label">Thu</div>
+                            </div>
+                            <div class="chart-bar-group">
+                                <div class="chart-bar-container">
+                                    <div class="chart-bar-fill" style="height: 70%;"></div>
+                                </div>
+                                <div class="chart-label">Fri</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Feature Comparison CTA -->
+    <section class="features-cta">
+        <div class="container">
+            <h2>Ready to see these features in action?</h2>
+            <p>A 20-minute demo shows you the actual app running a real clinic scenario.</p>
+            <a href="demo.html" class="cta-button">Request a Demo →</a>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container footer-container">
+            <div class="footer-brand">
+                <h3>DermMap</h3>
+                <p>Lesion documentation that actually fits in an exam room.</p>
+            </div>
+            <div class="footer-links">
+                <ul>
+                    <li><a href="features.html">Features</a></li>
+                    <li><a href="security.html">Security</a></li>
+                    <li><a href="pricing.html">Pricing</a></li>
+                    <li><a href="demo.html">Demo</a></li>
+                </ul>
+            </div>
+            <div class="footer-badge">
+                <div class="hipaa-badge">HIPAA Compliant</div>
+            </div>
+        </div>
+        <div class="footer-bottom">
+            <p>&copy; 2025 DermMap. All rights reserved.</p>
+        </div>
+    </footer>
+
+    <script src="js/main.js"></script>
+</body>
+</html>

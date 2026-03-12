@@ -1,5 +1,6 @@
 import express from 'express';
 import bcrypt from 'bcryptjs';
+import { randomUUID } from 'crypto';
 import pool from '../db/pool.js';
 import { authenticateToken, authorizeRoles } from '../middleware/auth.js';
 
@@ -48,7 +49,7 @@ router.post('/', async (req, res) => {
     }
 
     const passwordHash = await bcrypt.hash(password, 12);
-    const userId = `${role}-${Date.now()}`;
+    const userId = randomUUID();
 
     const result = await pool.query(
       `INSERT INTO users (id, name, email, password_hash, role, credentials, status)

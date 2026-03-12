@@ -14,13 +14,13 @@ interface AdminUser {
 }
 
 const FALLBACK_USERS: AdminUser[] = [
-  { id: 'dr-001', name: 'Dr. Sarah Mitchell', email: 'sarah.mitchell@dermclinic.com', role: 'provider', credentials: 'MD, FAAD', status: 'active', last_login_at: '2025-01-08T14:18:00Z', mfa: true },
-  { id: 'dr-002', name: 'Dr. James Park', email: 'james.park@dermclinic.com', role: 'provider', credentials: 'MD', status: 'active', last_login_at: '2025-01-07T09:00:00Z', mfa: true },
-  { id: 'dr-003', name: 'Dr. Amara Osei', email: 'amara.osei@dermclinic.com', role: 'provider', credentials: 'MD, PhD', status: 'active', last_login_at: '2025-01-06T11:30:00Z', mfa: true },
-  { id: 'ma-001', name: 'Alex Johnson', email: 'alex.johnson@dermclinic.com', role: 'ma', credentials: 'CMA', status: 'active', last_login_at: '2025-01-08T14:02:00Z', mfa: true },
-  { id: 'ma-002', name: 'Maria Santos', email: 'maria.santos@dermclinic.com', role: 'ma', credentials: 'CMA', status: 'active', last_login_at: '2025-01-08T08:45:00Z', mfa: true },
+  { id: 'dr-001', name: 'Dr. Sarah Mitchell', email: 'sarah.mitchell@dermclinic.com', role: 'provider', credentials: 'MD, FAAD', status: 'active', last_login_at: '2026-03-10T14:18:00Z', mfa: true },
+  { id: 'dr-002', name: 'Dr. James Park', email: 'james.park@dermclinic.com', role: 'provider', credentials: 'MD', status: 'active', last_login_at: '2026-03-10T09:00:00Z', mfa: true },
+  { id: 'dr-003', name: 'Dr. Amara Osei', email: 'amara.osei@dermclinic.com', role: 'provider', credentials: 'MD, PhD', status: 'active', last_login_at: '2026-03-09T11:30:00Z', mfa: true },
+  { id: 'ma-001', name: 'Alex Johnson', email: 'alex.johnson@dermclinic.com', role: 'ma', credentials: 'CMA', status: 'active', last_login_at: '2026-03-10T14:02:00Z', mfa: true },
+  { id: 'ma-002', name: 'Maria Santos', email: 'maria.santos@dermclinic.com', role: 'ma', credentials: 'CMA', status: 'active', last_login_at: '2026-03-10T08:45:00Z', mfa: true },
   { id: 'ma-003', name: 'Casey Rivera', email: 'casey.rivera@dermclinic.com', role: 'ma', credentials: 'MA', status: 'pending', last_login_at: null, mfa: false },
-  { id: 'admin-001', name: 'Taylor Brooks', email: 'taylor.brooks@dermclinic.com', role: 'manager', credentials: 'Practice Manager', status: 'active', last_login_at: '2025-01-08T09:00:00Z', mfa: true },
+  { id: 'admin-001', name: 'Taylor Brooks', email: 'taylor.brooks@dermclinic.com', role: 'manager', credentials: 'Practice Manager', status: 'active', last_login_at: '2026-03-10T09:00:00Z', mfa: true },
 ];
 
 const roleColors: Record<string, string> = {
