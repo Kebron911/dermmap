@@ -1,9 +1,22 @@
 /// <reference types="vitest/config" />
-import { defineConfig } from 'vite'
+import { defineConfig, loadEnv } from 'vite'
 import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
 
-export default defineConfig({
+export default defineConfig(({ mode }) => {
+  const env = loadEnv(mode, process.cwd(), '');
+
+  // Warn build operators if VITE_AUTH_PROVIDER is not explicitly set in non-development builds.
+  // In production, config.ts defaults to 'custom' (demo disabled), but explicit opt-in is safer.
+  if (mode !== 'development' && !env.VITE_AUTH_PROVIDER) {
+    console.warn(
+      '\x1b[33m\n[DermMap] VITE_AUTH_PROVIDER is not set. ' +
+      'Production build will default to "custom" auth (demo mode disabled). ' +
+      'Set VITE_AUTH_PROVIDER=custom in your build environment to silence this warning.\n\x1b[0m'
+    );
+  }
+
+  return {
   plugins: [
     react(),
     VitePWA({
@@ -38,30 +51,10 @@ export default defineConfig({
       },
       workbox: {
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
-        runtimeCaching: [
-          {
-            urlPattern: /^https:\/\/api\.dermmap\.io\/.*/i,
-            handler: 'NetworkFirst',
-            options: {
-              cacheName: 'api-cache',
-              expiration: {
-                maxEntries: 50,
-                maxAgeSeconds: 5 * 60, // 5 minutes
-              },
-            },
-          },
-          {
-            urlPattern: /\.(?:png|jpg|jpeg|svg|gif|webp)$/,
-            handler: 'CacheFirst',
-            options: {
-              cacheName: 'images',
-              expiration: {
-                maxEntries: 100,
-                maxAgeSeconds: 30 * 24 * 60 * 60, // 30 days
-              },
-            },
-          },
-        ],
+        // No runtimeCaching for /api/ routes — PHI must NOT be stored in SW caches
+        // (HIPAA: caches survive logout on shared devices).
+        // Static UI assets only.
+        runtimeCaching: [],
       },
     }),
   ],
@@ -110,4 +103,5 @@ export default defineConfig({
       },
     },
   },
+  };
 })

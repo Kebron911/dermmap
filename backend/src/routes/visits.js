@@ -1,7 +1,8 @@
 import express from 'express';
 import { body, validationResult } from 'express-validator';
 import pool from '../db/pool.js';
-import { authenticateToken } from '../middleware/auth.js';
+import { authenticateToken, authorizeRoles } from '../middleware/auth.js';
+import { logAudit } from '../middleware/auditLog.js';
 
 const router = express.Router();
 router.use(authenticateToken);
@@ -90,6 +91,11 @@ router.get('/:visitId', async (req, res) => {
       }
     }
     
+    await logAudit({
+      userId: req.user.id, userName: req.user.name, userRole: req.user.role,
+      action: 'VIEW_VISIT', resourceType: 'visit', resourceId: visitId,
+      ip: req.ip,
+    });
     res.json(visit);
   } catch (error) {
     console.error('Error fetching visit:', error);
@@ -128,6 +134,11 @@ router.post('/', createVisitRules, async (req, res) => {
     const newVisit = result.rows[0];
     newVisit.lesions = [];
     
+    await logAudit({
+      userId: req.user.id, userName: req.user.name, userRole: req.user.role,
+      action: 'CREATE_VISIT', resourceType: 'visit', resourceId: newVisit.visit_id,
+      ip: req.ip,
+    });
     res.status(201).json(newVisit);
   } catch (error) {
     console.error('Error creating visit:', error);
@@ -166,6 +177,11 @@ router.put('/:visitId', updateVisitRules, async (req, res) => {
       return res.status(404).json({ error: 'Visit not found' });
     }
     
+    await logAudit({
+      userId: req.user.id, userName: req.user.name, userRole: req.user.role,
+      action: 'UPDATE_VISIT', resourceType: 'visit', resourceId: visitId,
+      ip: req.ip,
+    });
     res.json(result.rows[0]);
   } catch (error) {
     console.error('Error updating visit:', error);
@@ -173,8 +189,8 @@ router.put('/:visitId', updateVisitRules, async (req, res) => {
   }
 });
 
-// Delete visit
-router.delete('/:visitId', async (req, res) => {
+// Delete visit — provider or above only (MAs cannot delete clinical records)
+router.delete('/:visitId', authorizeRoles('admin', 'manager', 'provider'), async (req, res) => {
   try {
     const { visitId } = req.params;
     const privileged = isPrivileged(req.user.role);
@@ -195,6 +211,11 @@ router.delete('/:visitId', async (req, res) => {
       return res.status(404).json({ error: 'Visit not found' });
     }
     
+    await logAudit({
+      userId: req.user.id, userName: req.user.name, userRole: req.user.role,
+      action: 'DELETE_VISIT', resourceType: 'visit', resourceId: visitId,
+      ip: req.ip,
+    });
     res.json({ message: 'Visit deleted', visit_id: visitId });
   } catch (error) {
     console.error('Error deleting visit:', error);

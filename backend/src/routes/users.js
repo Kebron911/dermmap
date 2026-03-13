@@ -10,13 +10,21 @@ const router = express.Router();
 router.use(authenticateToken);
 router.use(authorizeRoles('manager', 'admin'));
 
-// GET /api/admin/users — list all users
+// GET /api/admin/users — list users scoped to the requester's clinic for managers
 router.get('/', async (req, res) => {
   try {
+    const isAdmin = req.user.role === 'admin';
+    const params = isAdmin ? [] : [req.user.location_id || null];
     const result = await pool.query(
-      `SELECT id, name, email, role, credentials, status, last_login_at, created_at
-       FROM users
-       ORDER BY created_at DESC`
+      isAdmin
+        ? `SELECT id, name, email, role, credentials, status, last_login_at, created_at
+           FROM users
+           ORDER BY created_at DESC`
+        : `SELECT id, name, email, role, credentials, status, last_login_at, created_at
+           FROM users
+           WHERE location_id = $1
+           ORDER BY created_at DESC`,
+      params
     );
     res.json(result.rows);
   } catch (error) {
@@ -99,13 +107,27 @@ router.patch('/:id', async (req, res) => {
     updates.push(`updated_at = CURRENT_TIMESTAMP`);
     values.push(id);
 
+    // Managers can only update users within their own clinic (Issue 17)
+    const isAdmin = req.user.role === 'admin';
+    const locationClause = isAdmin ? '' : ` AND location_id = $${idx + 1}`;
+    const locationParam = isAdmin ? [] : [req.user.location_id || null];
+
     const result = await pool.query(
-      `UPDATE users SET ${updates.join(', ')} WHERE id = $${idx} RETURNING id, name, email, role, credentials, status`,
-      values
+      `UPDATE users SET ${updates.join(', ')} WHERE id = $${idx}${locationClause} RETURNING id, name, email, role, credentials, status`,
+      [...values, ...locationParam]
     );
 
     if (result.rows.length === 0) {
       return res.status(404).json({ error: 'User not found' });
+    }
+
+    // Issue 18: If the account was just deactivated, revoke all active sessions immediately
+    if (status === 'inactive') {
+      await pool.query(
+        `UPDATE user_sessions SET revoked_at = CURRENT_TIMESTAMP
+         WHERE user_id = $1 AND revoked_at IS NULL`,
+        [id]
+      );
     }
 
     res.json(result.rows[0]);
@@ -124,14 +146,28 @@ router.delete('/:id', async (req, res) => {
       return res.status(400).json({ error: 'You cannot deactivate your own account' });
     }
 
+    // Managers can only deactivate users within their own clinic (Issue 17)
+    const isAdmin = req.user.role === 'admin';
+    const whereClause = isAdmin
+      ? `id = $1`
+      : `id = $1 AND location_id = $2`;
+    const params = isAdmin ? [id] : [id, req.user.location_id || null];
+
     const result = await pool.query(
-      `UPDATE users SET status = 'inactive', updated_at = CURRENT_TIMESTAMP WHERE id = $1 RETURNING id`,
-      [id]
+      `UPDATE users SET status = 'inactive', updated_at = CURRENT_TIMESTAMP WHERE ${whereClause} RETURNING id`,
+      params
     );
 
     if (result.rows.length === 0) {
       return res.status(404).json({ error: 'User not found' });
     }
+
+    // Issue 18: Revoke all active sessions so the deactivated user is logged out immediately
+    await pool.query(
+      `UPDATE user_sessions SET revoked_at = CURRENT_TIMESTAMP
+       WHERE user_id = $1 AND revoked_at IS NULL`,
+      [id]
+    );
 
     res.json({ success: true });
   } catch (error) {

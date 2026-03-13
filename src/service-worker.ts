@@ -3,7 +3,7 @@
 import { clientsClaim } from 'workbox-core';
 import { precacheAndRoute } from 'workbox-precaching';
 import { registerRoute } from 'workbox-routing';
-import { StaleWhileRevalidate, CacheFirst } from 'workbox-strategies';
+import { CacheFirst } from 'workbox-strategies';
 import { ExpirationPlugin } from 'workbox-expiration';
 
 declare const self: ServiceWorkerGlobalScope;
@@ -13,38 +13,38 @@ clientsClaim();
 // Precache all build assets
 precacheAndRoute(self.__WB_MANIFEST);
 
-// Cache images
+// Cache only static non-PHI assets (images from /assets/ build output).
+// Clinical photos are NOT cached — they may contain PHI.
 registerRoute(
-  ({ request }) => request.destination === 'image',
+  ({ request, url }) =>
+    request.destination === 'image' && url.pathname.startsWith('/assets/'),
   new CacheFirst({
-    cacheName: 'images',
+    cacheName: 'static-images',
     plugins: [
       new ExpirationPlugin({
         maxEntries: 100,
-        maxAgeSeconds: 30 * 24 * 60 * 60, // 30 days
+        maxAgeSeconds: 7 * 24 * 60 * 60, // 7 days for UI assets only
       }),
     ],
   }),
 );
 
-// Cache API responses with stale-while-revalidate
-registerRoute(
-  ({ url }) => url.pathname.startsWith('/api/'),
-  new StaleWhileRevalidate({
-    cacheName: 'api-cache',
-    plugins: [
-      new ExpirationPlugin({
-        maxEntries: 50,
-        maxAgeSeconds: 5 * 60, // 5 minutes
-      }),
-    ],
-  }),
-);
+// NOTE: /api/ responses are intentionally NOT cached by the service worker.
+// PHI (patients, visits, lesions, photos) must never be stored in SW caches
+// because SW caches survive logout and are not HIPAA-compliant for shared devices.
 
 // Skip waiting and claim clients immediately
 self.addEventListener('message', (event) => {
   if (event.data && event.data.type === 'SKIP_WAITING') {
     self.skipWaiting();
+  }
+
+  // Clear all SW caches on logout to remove any residual PHI.
+  // Called by the store's logout() via navigator.serviceWorker.controller.postMessage().
+  if (event.data && event.data.type === 'CLEAR_CACHES') {
+    event.waitUntil(
+      caches.keys().then(names => Promise.all(names.map(name => caches.delete(name))))
+    );
   }
 });
 

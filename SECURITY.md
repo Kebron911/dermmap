@@ -1,111 +1,145 @@
 # Security Implementation Guide
 
-## Implemented Security Features
+**Last updated:** 2026-03-13
 
-### Content Security Policy (CSP)
-Add the following headers to your nginx configuration or Cloudflare settings:
+This document reflects the **actual** security implementation in DermMap. For the full list of remediated vulnerabilities see `docs/SECURITY_REMEDIATION_PLAN.md`.
+
+---
+
+## Authentication Stack
+
+DermMap uses **custom JWT authentication** — there is no third-party identity provider (Auth0 was removed). The stack is:
+
+| Layer | Technology |
+|---|---|
+| Password hashing | bcrypt, cost factor 12 |
+| Session tokens | JWT (HS256), 24-hour lifetime, `jti` claim |
+| Token revocation | `user_sessions` table — every JWT is tracked and can be revoked immediately |
+| Refresh rotation | Each `/auth/refresh` revokes the old `jti` and issues a new one |
+| MFA / 2FA | TOTP via `otplib` — standard authenticator app (Google Authenticator, Authy) |
+| Password reset | Secure random token, SHA-256 hashed in DB, 1-hour expiry, invalidates all sessions |
+| Account lockout | 5 failed login attempts → 15-minute lockout per email address |
+| Session timeout | 15-minute idle timeout enforced client-side (`useSessionTimeout` hook) |
+
+### No CSRF risk
+JWTs are sent via `Authorization: Bearer` header, not cookies — stateless bearer auth has no CSRF surface.
+
+---
+
+## Nginx Security Headers (nginx.conf)
 
 ```nginx
-# Content Security Policy
-add_header Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' https://www.google-analytics.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' https://api.dermmap.io https://sentry.io; frame-ancestors 'none'; base-uri 'self'; form-action 'self';" always;
-
-# Prevent XSS attacks
-add_header X-XSS-Protection "1; mode=block" always;
-
-# Prevent clickjacking
 add_header X-Frame-Options "DENY" always;
-
-# Prevent MIME sniffing
 add_header X-Content-Type-Options "nosniff" always;
-
-# Referrer Policy
 add_header Referrer-Policy "strict-origin-when-cross-origin" always;
-
-# Permissions Policy (formerly Feature-Policy)
-add_header Permissions-Policy "camera=(), microphone=(), geolocation=()" always;
-
-# HSTS (force HTTPS)
+add_header Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; font-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self';" always;
 add_header Strict-Transport-Security "max-age=63072000; includeSubDomains; preload" always;
+add_header Permissions-Policy "camera=(), microphone=(), geolocation=()" always;
+add_header X-XSS-Protection "0" always;
 ```
 
-### Authentication & Session Management
-- ✅ JWT tokens stored in sessionStorage (not localStorage for security)
-- ✅ Session timeout after 15 minutes of inactivity
-- ✅ Token refresh on user activity
-- ✅ Secure cookies (SameSite=Strict, Secure, HttpOnly)
-- ✅ CSRF protection via Auth0
+---
 
-### API Security
-- ✅ Authorization header on all API calls
-- ✅ Request timeout (15 seconds)
-- ✅ CORS properly configured
-- ✅ API error handling without exposing internals
+## Access Control
 
-### Data Protection (HIPAA Compliance)
-- ✅ All PHI masked in error reporting (Sentry)
-- ✅ Analytics anonymizes IP addresses
-- ✅ Audit log for all data access
-- ✅ No PII in client-side logs
-- ✅ Session auto-logout on inactivity
+- ✅ Role-based access control: `admin`, `manager`, `provider`, `ma`
+- ✅ Location-tenancy enforced on all clinical routes (patients, visits, lesions, photos, schedule, analytics)
+- ✅ Managers scoped to their own clinic; admins see all clinics
+- ✅ DELETE operations on clinical records restricted to `provider` and above
+- ✅ Deactivated users: all sessions immediately revoked on deactivation
+- ✅ `authorizeRoles` returns generic 403 — does not disclose required role
 
-### Client-Side Security
-- ✅ No eval() or Function() constructors
-- ✅ DOMPurify for sanitizing user input
-- ✅ HTTPS-only in production
-- ✅ Secure dependencies (regular npm audit)
+---
 
-## Security Audit Checklist
+## Audit Logging (HIPAA §164.312(b))
 
-### Pre-Launch
-- [ ] Run npm audit and fix all vulnerabilities
-- [ ] Penetration testing by security firm
-- [ ] HIPAA compliance review
-- [ ] OWASP Top 10 verification
-- [ ] Code review by security expert
-- [ ] Dependency scanning with Snyk or Dependabot
-- [ ] WAF (Web Application Firewall) setup
-- [ ] DDoS protection enabled
-- [ ] Rate limiting on API endpoints
-- [ ] Input validation on all user inputs
+All PHI access, creation, modification, and deletion is recorded server-side in the `audit_logs` table:
 
-### Ongoing
-- [ ] Monthly security audits
-- [ ] Automated dependency updates
-- [ ] Monitor Sentry for security events
-- [ ] Regular backup testing
-- [ ] Incident response plan documented
-- [ ] Security training for dev team
+- Routes covered: patients, visits, lesions, photos, sync
+- Fields logged: `user_id`, `user_name`, `user_role`, `action_type`, `resource_type`, `resource_id`, `ip_address`, `timestamp`
+- Request log format: `[timestamp] METHOD /path user=<id> ip=<ip> status=<code>`
+- Logs are written inside a `try/catch` — audit failures never break the primary request
+
+---
+
+## Data Protection (HIPAA)
+
+- ✅ Database transport encrypted via SSL (`DB_SSL=true` in production)
+- ✅ PHI never cached in service worker — Cache API is cleared on logout
+- ✅ IndexedDB (`DermMapOfflineDB` and `dermmap`) fully cleared on logout
+- ✅ `sessionStorage` cleared on logout
+- ✅ Server stack traces never sent to clients (logged server-side only)
+- ✅ Demo mode disabled in production builds unless `VITE_AUTH_PROVIDER=demo` is explicitly set
+
+---
+
+## Migration Framework
+
+Schema changes are managed by versioned `node-pg-migrate` migrations in `backend/migrations/`. All future schema changes must be expressed as numbered migration files — no DDL at runtime.
+
+```bash
+npm run db:migrate       # apply pending migrations
+npm run db:rollback      # roll back last migration
+npm run db:migrate:create -- <name>   # scaffold new migration
+```
+
+---
 
 ## Production Deployment Security
 
-### Environment Variables
-**Never commit these to git:**
-- `VITE_SENTRY_DSN`
-- `VITE_AUTH0_CLIENT_ID`
-- `VITE_AUTH0_DOMAIN`
-- `VITE_GA_MEASUREMENT_ID`
-- `VITE_S3_UPLOAD_URL`
+### Required Environment Variables
+**Never commit these to git — use `.env` or a secrets manager:**
 
-Use environment-specific `.env` files or a secrets manager (AWS Secrets Manager, Azure Key Vault, HashiCorp Vault).
+| Variable | Purpose |
+|---|---|
+| `JWT_SECRET` | JWT signing secret — minimum 32 characters, cryptographically random |
+| `DB_PASSWORD` | PostgreSQL password |
+| `DB_SSL` | Set to `true` in production |
+| `SMTP_PASS` | SMTP password for password-reset emails |
+| `DOCUSIGN_CONNECT_SECRET` | HMAC secret for DocuSign webhook verification |
+
+See `.env.docker.example` for a complete template.
 
 ### SSL/TLS
 - Use TLS 1.3 minimum
 - A+ rating on SSL Labs
 - Certificate auto-renewal
-- HSTS preloading
+- HSTS preloading (header deployed)
 
 ### Monitoring
-- Enable Sentry error tracking
 - Set up security alerts
-- Monitor failed login attempts
+- Monitor failed login attempts (`audit_logs` + application logs)
 - Track unusual API access patterns
 - Log all authentication events
 
+---
+
+## Security Audit Checklist
+
+### Pre-Launch
+- [ ] Run `npm audit` and fix all high/critical vulnerabilities
+- [ ] Penetration testing by security firm
+- [ ] HIPAA compliance review
+- [ ] OWASP Top 10 verification
+- [ ] Dependency scanning with Snyk or Dependabot
+- [ ] WAF (Web Application Firewall) setup
+- [ ] DDoS protection enabled
+- [ ] Input validation on all user inputs
+
+### Ongoing
+- [ ] Monthly security audits
+- [ ] Automated dependency updates
+- [ ] Regular backup testing
+- [ ] Incident response plan documented
+- [ ] Staff training on PHI handling
+
+---
+
 ## Incident Response Plan
 
-1. **Detection**: Sentry alerts, user reports, monitoring tools
+1. **Detection**: Application logs, user reports, monitoring tools
 2. **Assessment**: Severity, scope, affected users
-3. **Containment**: Disable compromised accounts, block IPs
+3. **Containment**: Revoke sessions (`UPDATE user_sessions SET revoked_at = NOW() WHERE user_id = $1`), disable compromised accounts
 4. **Eradication**: Fix vulnerability, patch systems
 5. **Recovery**: Restore from backups if needed
 6. **Post-Incident**: Review, document, improve
@@ -114,9 +148,10 @@ Use environment-specific `.env` files or a secrets manager (AWS Secrets Manager,
 
 ### HIPAA
 - [ ] Business Associate Agreement (BAA) signed
-- [ ] Encryption at rest and in transit
-- [ ] Access controls and audit logs
-- [ ] Breach notification procedures
+- ✅ Encryption in transit (TLS + DB SSL)
+- ✅ Access controls and audit logs
+- [ ] Encryption at rest (OS/disk-level — outside app scope)
+- [ ] Breach notification procedures documented
 - [ ] Regular risk assessments
 - [ ] Staff training on PHI handling
 

@@ -8,6 +8,7 @@ export default defineConfig({
     env: {
       JWT_SECRET: 'test-secret-key-for-vitest-only',
       NODE_ENV: 'test',
+      DOCUSIGN_CONNECT_SECRET: 'test-webhook-secret-for-vitest',
     },
   },
 });

@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { User, Patient, Visit, Lesion, BodyView, VisitStatus } from '../types';
 import { apiClient } from '../services/apiClient';
 import indexedDB from '../services/indexedDB';
+import { db } from '../services/db';
 import syncService from '../services/syncService';
 import type { SyncConflict } from '../components/sync/ConflictResolutionModal';
 
@@ -107,8 +108,16 @@ export const useAppStore = create<AppState>((set, get) => ({
     apiClient.logout();
     // Stop the sync service before clearing state to prevent post-logout sync with stale credentials
     syncService.destroy();
-    // Wipe all cached PHI from IndexedDB so it doesn't persist across sessions
+    // Wipe all cached PHI from both IndexedDB databases so it doesn't persist across sessions
     indexedDB.clearAll().catch(() => {});
+    db.clearAll().catch(() => {});
+    // Clear auth tokens from sessionStorage (written by authService.login)
+    sessionStorage.removeItem('auth_token');
+    sessionStorage.removeItem('auth_user');
+    // Tell the service worker to purge all caches so no PHI remains in SW storage
+    if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+      navigator.serviceWorker.controller.postMessage({ type: 'CLEAR_CACHES' });
+    }
     set({
       currentUser: null,
       token: null,

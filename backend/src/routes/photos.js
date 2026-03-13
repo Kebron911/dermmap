@@ -1,6 +1,7 @@
 import express from 'express';
 import pool from '../db/pool.js';
-import { authenticateToken } from '../middleware/auth.js';
+import { authenticateToken, authorizeRoles } from '../middleware/auth.js';
+import { logAudit } from '../middleware/auditLog.js';
 
 const router = express.Router();
 
@@ -36,6 +37,11 @@ router.get('/:photoId', authenticateToken, async (req, res) => {
     res.setHeader('Content-Type', safeMime);
     // PHI — must not be cached by shared/public caches
     res.setHeader('Cache-Control', 'private, no-store');
+    await logAudit({
+      userId: req.user.id, userName: req.user.name, userRole: req.user.role,
+      action: 'VIEW_PHOTO', resourceType: 'photo', resourceId: photoId,
+      ip: req.ip,
+    });
     res.send(photo.photo_data);
     
   } catch (error) {
@@ -58,17 +64,35 @@ router.post('/', authenticateToken, async (req, res) => {
       return res.status(400).json({ error: `Invalid mime_type. Allowed: ${[...ALLOWED_MIME_TYPES].join(', ')}` });
     }
     const safeMime = ALLOWED_MIME_TYPES.has(mime_type) ? mime_type : DEFAULT_MIME;
+
+    // Issue 15: Verify the target lesion belongs to the user's clinic (location-tenancy)
+    const isPrivileged = ['admin', 'manager'].includes(req.user.role);
+    const tenancyCheck = await pool.query(
+      `SELECT 1 FROM lesions l
+       JOIN visits v ON v.visit_id = l.visit_id
+       JOIN patients pt ON pt.patient_id = v.patient_id
+       WHERE l.lesion_id = $1 AND ($2 OR pt.location_id = $3)`,
+      [lesion_id, isPrivileged, req.user.location_id || null]
+    );
+    if (tenancyCheck.rows.length === 0) {
+      return res.status(404).json({ error: 'Lesion not found' });
+    }
     
     // Convert base64 to binary
     const buffer = Buffer.from(photo_data, 'base64');
     
     const result = await pool.query(
-      `INSERT INTO photos (photo_id, lesion_id, visit_id, photo_data, photo_type, mime_type, file_size, created_by)
+      `INSERT INTO photos (photo_id, lesion_id, visit_id, photo_data, capture_type, mime_type, file_size, created_by)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-       RETURNING photo_id, photo_type, mime_type, file_size, created_at`,
+       RETURNING photo_id, capture_type, mime_type, file_size, created_at`,
       [photo_id, lesion_id, visit_id, buffer, photo_type || 'clinical', safeMime, buffer.length, req.user.id]
     );
     
+    await logAudit({
+      userId: req.user.id, userName: req.user.name, userRole: req.user.role,
+      action: 'CREATE_PHOTO', resourceType: 'photo', resourceId: photo_id,
+      ip: req.ip,
+    });
     res.status(201).json({
       ...result.rows[0],
       url: `/api/photos/${photo_id}`
@@ -80,8 +104,8 @@ router.post('/', authenticateToken, async (req, res) => {
   }
 });
 
-// Delete photo
-router.delete('/:photoId', authenticateToken, async (req, res) => {
+// Delete photo — admin/manager only (preserves clinical record integrity)
+router.delete('/:photoId', authenticateToken, authorizeRoles('admin', 'manager'), async (req, res) => {
   try {
     const { photoId } = req.params;
     const isAdmin = ['admin', 'manager'].includes(req.user.role);
@@ -105,6 +129,11 @@ router.delete('/:photoId', authenticateToken, async (req, res) => {
       return res.status(404).json({ error: 'Photo not found' });
     }
     
+    await logAudit({
+      userId: req.user.id, userName: req.user.name, userRole: req.user.role,
+      action: 'DELETE_PHOTO', resourceType: 'photo', resourceId: photoId,
+      ip: req.ip,
+    });
     res.json({ message: 'Photo deleted', photo_id: photoId });
   } catch (error) {
     console.error('Error deleting photo:', error);

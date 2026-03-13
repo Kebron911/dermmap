@@ -77,8 +77,8 @@ describe('GET /api/visits/:visitId', () => {
     expect(res.body.lesions[0].photos).toEqual(['/api/photos/ph-1', '/api/photos/ph-2']);
     expect(res.body.lesions[1].photos).toEqual(['/api/photos/ph-3']);
 
-    // 3 DB queries: visit + lesions + bulk photos (NOT 4+ as N+1 would produce)
-    expect(pool.query).toHaveBeenCalledTimes(3);
+    // 4 DB queries: visit + lesions + bulk photos + audit log (was 3 before audit logging)
+    expect(pool.query).toHaveBeenCalledTimes(4);
   });
 
   it('handles a visit with no lesions without querying photos', async () => {
@@ -93,7 +93,7 @@ describe('GET /api/visits/:visitId', () => {
 
     expect(res.status).toBe(200);
     expect(res.body.lesions).toHaveLength(0);
-    // Only 2 queries: visit + lesions (no photo query needed)
-    expect(pool.query).toHaveBeenCalledTimes(2);
+    // Only 3 queries: visit + lesions + audit log (no photo query needed when no lesions)
+    expect(pool.query).toHaveBeenCalledTimes(3);
   });
 });

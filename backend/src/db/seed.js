@@ -2,6 +2,12 @@ import pool from './pool.js';
 import bcrypt from 'bcryptjs';
 
 const seedDatabase = async () => {
+  // Block seeding in production (Issue 19)
+  if (process.env.NODE_ENV === 'production') {
+    console.error('FATAL: seed.js must not run in production');
+    process.exit(1);
+  }
+
   const client = await pool.connect();
   
   try {
@@ -19,10 +25,11 @@ const seedDatabase = async () => {
     
     console.log('✓ Cleared existing data');
     
-    // Insert demo users
-    const hashedPassword = await bcrypt.hash('demo123', 10);
+    // Insert demo users — HIPAA-compliant password (>=12 chars) and bcrypt cost 12 (Issue 19)
+    const hashedPassword = await bcrypt.hash('DemoPass1234!', 12);
     
     const users = [
+      { id: 'admin-001', name: 'System Admin', email: 'admin@dermmap.com', role: 'admin' },
       { id: 'ma-001', name: 'Alex Johnson', email: 'alex.ma@dermmap.com', role: 'ma' },
       { id: 'ma-002', name: 'Jamie Williams', email: 'jamie.ma@dermmap.com', role: 'ma' },
       { id: 'dr-001', name: 'Dr. Sarah Mitchell', email: 'sarah.dr@dermmap.com', role: 'provider' },
@@ -38,7 +45,7 @@ const seedDatabase = async () => {
       );
     }
     
-    console.log('✓ Inserted users (password: demo123)');
+    console.log('✓ Inserted users');
     
     // Insert demo patients
     const patients = [
@@ -263,10 +270,7 @@ const seedDatabase = async () => {
     
     console.log('✓ Inserted lesions');
     console.log('\n✓ Database seeded successfully!');
-    console.log('\nDemo Users:');
-    console.log('  MA: alex.ma@dermmap.com / demo123');
-    console.log('  Provider: sarah.dr@dermmap.com / demo123');
-    console.log('  Manager: taylor.mgr@dermmap.com / demo123');
+    console.log('\nDemo users created. See docs/LOCAL_DEV_GUIDE.md for credentials.');
     
     await client.query('COMMIT');
     

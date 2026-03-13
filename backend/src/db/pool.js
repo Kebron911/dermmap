@@ -19,6 +19,10 @@ const pool = new Pool({
   max: 20,
   idleTimeoutMillis: 30000,
   connectionTimeoutMillis: 2000,
+  // SSL/TLS for ePHI in transit (HIPAA §164.312(e)(1)) — set DB_SSL=true in cloud deployments
+  ssl: process.env.DB_SSL === 'true'
+    ? { rejectUnauthorized: process.env.DB_SSL_REJECT_UNAUTHORIZED !== 'false' }
+    : false,
 });
 
 // Test connection

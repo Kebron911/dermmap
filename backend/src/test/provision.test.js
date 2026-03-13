@@ -6,6 +6,7 @@
  *   POST /api/provision/docusign-webhook — DocuSign activation callback
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { createHmac } from 'crypto';
 
 // Bypass the tight per-IP rate limiter so all test cases can execute without 429
 vi.mock('express-rate-limit', () => ({
@@ -199,29 +200,71 @@ describe('POST /api/provision/clinic — business logic', () => {
 // POST /api/provision/docusign-webhook
 // ---------------------------------------------------------------------------
 
+// The webhook secret injected by vitest.config.js
+const TEST_WEBHOOK_SECRET = 'test-webhook-secret-for-vitest';
+
+/** Compute the HMAC-SHA256 signature for a given request body object. */
+function webhookSig(body) {
+  const raw = typeof body === 'string' ? body : JSON.stringify(body);
+  return createHmac('sha256', TEST_WEBHOOK_SECRET).update(raw).digest('base64');
+}
+
 describe('POST /api/provision/docusign-webhook', () => {
   beforeEach(() => vi.clearAllMocks());
 
-  it('returns 200 for non-completed envelope status (e.g. "sent")', async () => {
+  it('returns 503 when DOCUSIGN_CONNECT_SECRET is not configured', async () => {
+    vi.stubEnv('DOCUSIGN_CONNECT_SECRET', '');
+    try {
+      const res = await request(app)
+        .post('/api/provision/docusign-webhook')
+        .send({ status: 'sent', envelopeId: 'env-001' });
+      expect(res.status).toBe(503);
+    } finally {
+      vi.unstubAllEnvs();
+    }
+  });
+
+  it('returns 401 when X-DocuSign-Signature-1 header is missing', async () => {
     const res = await request(app)
       .post('/api/provision/docusign-webhook')
       .send({ status: 'sent', envelopeId: 'env-001' });
+    expect(res.status).toBe(401);
+  });
+
+  it('returns 401 when X-DocuSign-Signature-1 is wrong', async () => {
+    const res = await request(app)
+      .post('/api/provision/docusign-webhook')
+      .set('X-DocuSign-Signature-1', 'bm90YXZhbGlkc2lnbmF0dXJl')
+      .send({ status: 'sent', envelopeId: 'env-001' });
+    expect(res.status).toBe(401);
+  });
+
+  it('returns 200 for non-completed envelope status (e.g. "sent")', async () => {
+    const body = { status: 'sent', envelopeId: 'env-001' };
+    const res = await request(app)
+      .post('/api/provision/docusign-webhook')
+      .set('X-DocuSign-Signature-1', webhookSig(body))
+      .send(body);
     expect(res.status).toBe(200);
     expect(res.body.received).toBe(true);
   });
 
   it('returns 200 when envelopeId is missing', async () => {
+    const body = { status: 'completed' };
     const res = await request(app)
       .post('/api/provision/docusign-webhook')
-      .send({ status: 'completed' });
+      .set('X-DocuSign-Signature-1', webhookSig(body))
+      .send(body);
     expect(res.status).toBe(200);
     expect(res.body.received).toBe(true);
   });
 
   it('returns 200 with warning when location_id is absent from customFields', async () => {
+    const body = { status: 'completed', envelopeId: 'env-002', customFields: {} };
     const res = await request(app)
       .post('/api/provision/docusign-webhook')
-      .send({ status: 'completed', envelopeId: 'env-002', customFields: {} });
+      .set('X-DocuSign-Signature-1', webhookSig(body))
+      .send(body);
     expect(res.status).toBe(200);
     expect(res.body).toHaveProperty('warning');
   });
@@ -234,9 +277,11 @@ describe('POST /api/provision/docusign-webhook', () => {
       .mockResolvedValueOnce({})  // UPDATE users -> active
       .mockResolvedValueOnce({});  // COMMIT
 
+    const body = { status: 'completed', envelopeId: 'env-003', customFields: { location_id: 'loc-001' } };
     const res = await request(app)
       .post('/api/provision/docusign-webhook')
-      .send({ status: 'completed', envelopeId: 'env-003', customFields: { location_id: 'loc-001' } });
+      .set('X-DocuSign-Signature-1', webhookSig(body))
+      .send(body);
 
     expect(res.status).toBe(200);
     expect(res.body.received).toBe(true);
@@ -249,9 +294,11 @@ describe('POST /api/provision/docusign-webhook', () => {
       .mockResolvedValueOnce({})          // BEGIN
       .mockRejectedValueOnce(new Error('DB connection lost')); // UPDATE baa_records fails
 
+    const body = { status: 'completed', envelopeId: 'env-fail', customFields: { location_id: 'loc-001' } };
     const res = await request(app)
       .post('/api/provision/docusign-webhook')
-      .send({ status: 'completed', envelopeId: 'env-fail', customFields: { location_id: 'loc-001' } });
+      .set('X-DocuSign-Signature-1', webhookSig(body))
+      .send(body);
 
     // Must return 200 regardless — DocuSign retries on non-2xx responses
     expect(res.status).toBe(200);

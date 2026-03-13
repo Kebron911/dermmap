@@ -251,7 +251,7 @@ export function LoginScreen() {
         </div>
 
         <p className="text-center text-xs text-slate-500 mt-4">
-          Session timeout: 5 min (mobile) · 15 min (web) · MFA required
+          Inactivity timeout: 15 min · MFA required
         </p>
 
         {!config.isDemo && (

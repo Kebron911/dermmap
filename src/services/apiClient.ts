@@ -51,7 +51,7 @@ class APIClient {
   async login(email: string, password: string): Promise<{ user: User; token: string }> {
     if (config.isDemo) {
       const demoUser = DEMO_USERS.find(u => u.email === email);
-      if (demoUser && password === 'demo123') {
+    if (config.isDemo && config.isDev && demoUser && password === 'demo123') {
         const token = `demo-${demoUser.id}`;
         this.setToken(token);
         return { user: { id: demoUser.id, name: demoUser.name, role: demoUser.role, email: demoUser.email }, token };

@@ -23,6 +23,7 @@ import { QualityMetricsPage } from './pages/QualityMetricsPage';
 import { ReportBuilderPage } from './pages/ReportBuilderPage';
 import { OnboardingPage } from './pages/OnboardingPage';
 import syncService, { registerConflictHandler } from './services/syncService';
+import { useSessionTimeout } from './hooks/useSessionTimeout';
 import { auditLogger } from './services/auditLogger';
 import { analytics } from './services/analytics';
 import { setUser as setSentryUser } from './services/sentry';
@@ -50,8 +51,24 @@ function NavigationSyncer() {
 }
 
 function AuthenticatedApp() {
+  const { showWarning, secondsLeft, extendSession } = useSessionTimeout();
   return (
-    <AppShell>
+    <>
+      {showWarning && (
+        <div
+          role="alert"
+          className="fixed top-0 inset-x-0 z-50 bg-amber-400 text-stone-900 text-sm font-semibold text-center px-4 py-2"
+        >
+          Your session will expire in {secondsLeft}s due to inactivity.{' '}
+          <button
+            onClick={extendSession}
+            className="ml-2 underline font-bold cursor-pointer bg-transparent border-0 p-0"
+          >
+            Stay signed in
+          </button>
+        </div>
+      )}
+      <AppShell>
       <ErrorBoundary fallbackMessage="This page encountered an error. Try navigating to a different section.">
         <Routes>
           <Route path="/schedule" element={<SchedulePage />} />
@@ -69,8 +86,8 @@ function AuthenticatedApp() {
           <Route path="*" element={<Navigate to="/schedule" replace />} />
         </Routes>
       </ErrorBoundary>
-    </AppShell>
-  );
+      </AppShell>
+    </>
 }
 
 export default function App() {

@@ -1,7 +1,8 @@
 import express from 'express';
 import { body, validationResult } from 'express-validator';
 import pool from '../db/pool.js';
-import { authenticateToken } from '../middleware/auth.js';
+import { authenticateToken, authorizeRoles } from '../middleware/auth.js';
+import { logAudit } from '../middleware/auditLog.js';
 
 const router = express.Router();
 router.use(authenticateToken);
@@ -75,6 +76,11 @@ router.post('/', createLesionRules, async (req, res) => {
     const newLesion = result.rows[0];
     newLesion.photos = [];
     
+    await logAudit({
+      userId: req.user.id, userName: req.user.name, userRole: req.user.role,
+      action: 'CREATE_LESION', resourceType: 'lesion', resourceId: newLesion.lesion_id,
+      ip: req.ip,
+    });
     res.status(201).json(newLesion);
   } catch (error) {
     console.error('Error creating lesion:', error);
@@ -121,7 +127,12 @@ router.put('/:lesionId', updateLesionRules, async (req, res) => {
     if (result.rows.length === 0) {
       return res.status(404).json({ error: 'Lesion not found' });
     }
-    
+
+    await logAudit({
+      userId: req.user.id, userName: req.user.name, userRole: req.user.role,
+      action: 'UPDATE_LESION', resourceType: 'lesion', resourceId: lesionId,
+      ip: req.ip,
+    });
     res.json(result.rows[0]);
   } catch (error) {
     console.error('Error updating lesion:', error);
@@ -129,8 +140,8 @@ router.put('/:lesionId', updateLesionRules, async (req, res) => {
   }
 });
 
-// Delete lesion
-router.delete('/:lesionId', async (req, res) => {
+// Delete lesion — provider or above only (MAs cannot delete clinical records)
+router.delete('/:lesionId', authorizeRoles('admin', 'manager', 'provider'), async (req, res) => {
   try {
     const { lesionId } = req.params;
     const privileged = isPrivileged(req.user.role);
@@ -152,7 +163,12 @@ router.delete('/:lesionId', async (req, res) => {
     if (result.rows.length === 0) {
       return res.status(404).json({ error: 'Lesion not found' });
     }
-    
+
+    await logAudit({
+      userId: req.user.id, userName: req.user.name, userRole: req.user.role,
+      action: 'DELETE_LESION', resourceType: 'lesion', resourceId: lesionId,
+      ip: req.ip,
+    });
     res.json({ message: 'Lesion deleted', lesion_id: lesionId });
   } catch (error) {
     console.error('Error deleting lesion:', error);

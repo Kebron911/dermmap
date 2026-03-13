@@ -6,9 +6,9 @@ services:
     image: postgres:15-alpine
     container_name: dermmap-postgres
     environment:
-      POSTGRES_DB: dermmap
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: ${POSTGRES_DB:-dermmap}
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set in .env}
     ports:
       - "54320:5432"
     volumes:
@@ -30,14 +30,16 @@ services:
     environment:
       DB_HOST: postgres
       DB_PORT: 5432
-      DB_NAME: dermmap
-      DB_USER: postgres
-      DB_PASSWORD: postgres
+      DB_NAME: ${POSTGRES_DB:-dermmap}
+      DB_USER: ${POSTGRES_USER:-postgres}
+      DB_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set in .env}
+      DB_SSL: "false"
+      DB_SSL_REJECT_UNAUTHORIZED: "true"
       PORT: 3001
       NODE_ENV: production
-      JWT_SECRET: your-secret-key-change-this-in-production-${RANDOM_SECRET:-default}
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET must be set in .env (min 32 chars)}
       JWT_EXPIRES_IN: 24h
-      CORS_ORIGIN: http://localhost
+      CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost}
     ports:
       - "3001:3001"
     depends_on:
@@ -48,13 +50,15 @@ services:
     networks:
       - dermmap-network
     restart: unless-stopped
-    command: sh -c "npm run db:setup && npm run db:seed && node src/server.js"
+    command: sh -c "npm run db:setup && node src/server.js"
 
   # Frontend Application
   frontend:
     build:
       context: .
       dockerfile: Dockerfile
+      args:
+        VITE_AUTH_PROVIDER: custom
     container_name: dermmap-frontend
     ports:
       - "80:80"

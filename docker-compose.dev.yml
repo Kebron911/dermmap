@@ -31,9 +31,11 @@ services:
       DB_NAME: dermmap
       DB_USER: postgres
       DB_PASSWORD: postgres
+      DB_SSL: "false"
+      DB_SSL_REJECT_UNAUTHORIZED: "true"
       PORT: 3001
       NODE_ENV: development
-      JWT_SECRET: dev-secret-key-not-for-production
+      JWT_SECRET: dev-secret-key-not-for-production-only
       JWT_EXPIRES_IN: 24h
       CORS_ORIGIN: http://localhost:5173
     ports:
@@ -57,6 +59,7 @@ services:
     container_name: dermmap-frontend-dev
     environment:
       VITE_API_URL: http://localhost:3001/api
+      VITE_AUTH_PROVIDER: demo
     ports:
       - "5173:5173"
     depends_on:

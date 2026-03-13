@@ -16,6 +16,7 @@ import auditLogRoutes from './routes/auditLogs.js';
 import scheduleRoutes from './routes/schedule.js';
 import settingsRoutes from './routes/settings.js';
 import provisionRoutes from './routes/provision.js';
+import { cleanupExpiredSessions, cleanupExpiredResetTokens } from './db/cleanup.js';
 
 dotenv.config();
 
@@ -39,7 +40,12 @@ app.use(cors({
   credentials: true
 }));
 app.use(compression());
-app.use(express.json({ limit: '10mb' })); // For photo uploads
+app.use(express.json({
+  limit: '10mb',
+  // Capture raw body bytes so the DocuSign webhook handler can verify the
+  // HMAC-SHA256 signature over the exact bytes received (Issue 6).
+  verify: (req, _res, buf) => { req.rawBody = buf; },
+})); // For photo uploads and DocuSign webhook signature verification
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // Global rate limiter — 300 requests per minute per IP
@@ -51,9 +57,15 @@ app.use(rateLimit({
   message: { error: 'Too many requests. Please slow down.' },
 }));
 
-// Request logging middleware
+// Request logging middleware — includes user, IP, and status (HIPAA audit — Issue 25)
 app.use((req, res, next) => {
-  console.log(`${new Date().toISOString()} ${req.method} ${req.path}`);
+  const start = Date.now();
+  res.on('finish', () => {
+    const userId = req.user?.id || 'anonymous';
+    const ip = req.ip || req.headers['x-forwarded-for'] || 'unknown';
+    const duration = Date.now() - start;
+    console.log(`${new Date().toISOString()} ${req.method} ${req.path} user=${userId} ip=${ip} status=${res.statusCode} ${duration}ms`);
+  });
   next();
 });
 
@@ -85,13 +97,12 @@ app.use((req, res) => {
   res.status(404).json({ error: 'Route not found' });
 });
 
-// Error handling middleware
+// Error handling middleware — stack traces logged server-side only, never in responses (Issue 28)
 app.use((err, req, res, next) => {
-  console.error('Error:', err);
+  console.error('Error:', err.stack || err);
   
   res.status(err.status || 500).json({
-    error: err.message || 'Internal server error',
-    ...(process.env.NODE_ENV === 'development' && { stack: err.stack })
+    error: err.status && err.status < 500 ? err.message : 'Internal server error',
   });
 });
 
@@ -102,6 +113,15 @@ if (process.env.NODE_ENV !== 'test') {
     console.log(`  Environment: ${process.env.NODE_ENV || 'development'}`);
     console.log(`  Health check: http://localhost:${PORT}/health\n`);
   });
+
+  // Run cleanup immediately on startup, then every 6 hours
+  const SIX_HOURS_MS = 6 * 60 * 60 * 1000;
+  cleanupExpiredSessions().catch(err => console.error('[cleanup] Error cleaning sessions:', err));
+  cleanupExpiredResetTokens().catch(err => console.error('[cleanup] Error cleaning reset tokens:', err));
+  setInterval(() => {
+    cleanupExpiredSessions().catch(err => console.error('[cleanup] Error cleaning sessions:', err));
+    cleanupExpiredResetTokens().catch(err => console.error('[cleanup] Error cleaning reset tokens:', err));
+  }, SIX_HOURS_MS);
 }
 
 export default app;

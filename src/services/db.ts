@@ -134,4 +134,13 @@ export const db = {
     delete: (id: string) => txDelete('images', id),
     clear: () => txClear('images'),
   },
+
+  /** Clear every object store — call on logout to remove all PHI (Issue 27). */
+  clearAll: () =>
+    Promise.all([
+      txClear('patients'),
+      txClear('auditLog'),
+      txClear('syncQueue'),
+      txClear('images'),
+    ]).then(() => undefined),
 };

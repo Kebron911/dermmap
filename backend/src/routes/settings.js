@@ -5,20 +5,9 @@ import { authenticateToken, authorizeRoles } from '../middleware/auth.js';
 const router = express.Router();
 router.use(authenticateToken);
 
-// Ensure the settings table exists (idempotent)
-async function ensureSettingsTable() {
-  await pool.query(`
-    CREATE TABLE IF NOT EXISTS clinic_settings (
-      key   VARCHAR(120) PRIMARY KEY,
-      value TEXT NOT NULL
-    )
-  `);
-}
-
 // GET /api/settings — return all settings as a flat object
 router.get('/', async (req, res) => {
   try {
-    await ensureSettingsTable();
     const result = await pool.query('SELECT key, value FROM clinic_settings');
     const settings = {};
     result.rows.forEach(({ key, value }) => {
@@ -40,7 +29,6 @@ router.put('/', authorizeRoles('admin'), async (req, res) => {
   }
 
   try {
-    await ensureSettingsTable();
     const client = await pool.connect();
     try {
       await client.query('BEGIN');

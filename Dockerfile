@@ -4,6 +4,10 @@ WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci
 COPY . .
+# VITE_AUTH_PROVIDER must be 'custom' for production to disable demo mode.
+# Pass as a build arg: docker build --build-arg VITE_AUTH_PROVIDER=custom ...
+ARG VITE_AUTH_PROVIDER=custom
+ENV VITE_AUTH_PROVIDER=$VITE_AUTH_PROVIDER
 RUN npm run build
 
 # --- Production stage ---

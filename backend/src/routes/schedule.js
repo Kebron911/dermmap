@@ -5,10 +5,16 @@ import { authenticateToken } from '../middleware/auth.js';
 const router = express.Router();
 router.use(authenticateToken);
 
+// Returns true if the role can see all locations' data
+const isPrivileged = (role) => ['admin', 'manager'].includes(role);
+
 // GET /api/schedule/today — today's visits with patient info and stats
 router.get('/today', async (req, res) => {
   try {
-    // All visits scheduled for today (by UTC date)
+    const privileged = isPrivileged(req.user.role);
+    const locationId = req.user.location_id || null;
+
+    // Filter visits to the user's clinic unless admin/manager
     const visitsResult = await pool.query(`
       SELECT
         v.visit_id,
@@ -30,10 +36,11 @@ router.get('/today', async (req, res) => {
       FROM visits v
       JOIN patients p ON v.patient_id = p.patient_id
       WHERE DATE(v.visit_date AT TIME ZONE 'UTC') = CURRENT_DATE
+        AND ($1 OR p.location_id = $2)
       ORDER BY v.visit_date ASC
-    `);
+    `, [privileged, locationId]);
 
-    // Aggregate stats for today
+    // Aggregate stats scoped to the same location
     const statsResult = await pool.query(`
       SELECT
         COUNT(DISTINCT v.visit_id)::int AS scheduled,
@@ -43,10 +50,12 @@ router.get('/today', async (req, res) => {
           FILTER (WHERE v.completed_at IS NOT NULL AND v.completed_at - v.created_at < interval '1 hour'), 0
         )::numeric(5,1) AS avg_doc_time_sec
       FROM visits v
+      JOIN patients p ON v.patient_id = p.patient_id
       LEFT JOIN lesions l ON l.visit_id = v.visit_id
       LEFT JOIN photos ph ON ph.lesion_id = l.lesion_id AND DATE(ph.created_at AT TIME ZONE 'UTC') = CURRENT_DATE
       WHERE DATE(v.visit_date AT TIME ZONE 'UTC') = CURRENT_DATE
-    `);
+        AND ($1 OR p.location_id = $2)
+    `, [privileged, locationId]);
 
     const stats = statsResult.rows[0];
 

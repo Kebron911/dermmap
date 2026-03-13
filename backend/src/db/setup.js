@@ -1,3 +1,14 @@
+/**
+ * Legacy schema bootstrap — superseded by the versioned migration framework.
+ *
+ * PREFERRED path (Issue 20): use the migration runner instead:
+ *   npm run db:migrate       → applies all pending migrations in backend/migrations/
+ *   npm run db:rollback      → reverts the last migration
+ *   npm run db:migrate:create <name>  → scaffolds a new migration file
+ *
+ * This file is retained as a reference and fallback only.
+ * All future schema changes must be expressed as numbered migration files.
+ */
 import pool from './pool.js';
 
 const setupDatabase = async () => {
@@ -116,22 +127,23 @@ const setupDatabase = async () => {
       );
     `);
     
-    // Photos table — images stored in S3/cloud, only metadata + signed-URL key here.
-    // Storing BLOBs in Postgres (BYTEA) does not scale; cloud object storage is the
-    // correct pattern for clinical photo archives (S3, Azure Blob, GCS).
+    // Photos table — supports both BYTEA storage (dev/Option B) and cloud object
+    // storage (S3/GCS/Azure, Option A).  storage_key/storage_bucket are nullable
+    // so that BYTEA-based inserts (the current route implementation) do not fail.
     await client.query(`
       CREATE TABLE IF NOT EXISTS photos (
         photo_id VARCHAR(100) PRIMARY KEY,
         lesion_id VARCHAR(100) REFERENCES lesions(lesion_id) ON DELETE CASCADE,
         visit_id VARCHAR(100) REFERENCES visits(visit_id) ON DELETE CASCADE,
-        -- S3/cloud storage key used to generate short-lived signed URLs at read time.
-        -- Format: photos/{clinic_id}/{patient_id}/{visit_id}/{photo_id}.{ext}
-        storage_key TEXT NOT NULL,
+        -- S3/cloud storage key (Option A — cloud storage); NULL when using BYTEA.
+        storage_key TEXT,
         -- Bucket/container in the configured cloud provider (S3, Azure Blob, GCS).
-        storage_bucket TEXT NOT NULL DEFAULT 'dermmap-photos',
+        storage_bucket TEXT DEFAULT 'dermmap-photos',
         -- Cache the latest signed URL; refreshed by the API before expiry.
         signed_url TEXT,
         signed_url_expires_at TIMESTAMP,
+        -- Direct binary storage (Option B — development/small deployments); NULL when using cloud.
+        photo_data BYTEA,
         capture_type VARCHAR(20) NOT NULL CHECK (capture_type IN ('clinical', 'dermoscopic', 'overview')),
         file_size INTEGER NOT NULL,
         mime_type VARCHAR(50) NOT NULL,
@@ -182,8 +194,11 @@ const setupDatabase = async () => {
     await client.query(`ALTER TABLE photos ADD COLUMN IF NOT EXISTS capture_type VARCHAR(20);`).catch(() => {});
     await client.query(`ALTER TABLE photos ADD COLUMN IF NOT EXISTS width_px INTEGER;`).catch(() => {});
     await client.query(`ALTER TABLE photos ADD COLUMN IF NOT EXISTS height_px INTEGER;`).catch(() => {});
-    // Drop the BLOB column if it still exists (frees potentially large disk usage).
-    await client.query(`ALTER TABLE photos DROP COLUMN IF EXISTS photo_data;`).catch(() => {});
+    // Restore BYTEA column for BLOB storage (Issue 7 — Option B); no-op if already present.
+    await client.query(`ALTER TABLE photos ADD COLUMN IF NOT EXISTS photo_data BYTEA;`).catch(() => {});
+    // Drop NOT NULL constraints added by earlier schema versions so BYTEA-only inserts succeed.
+    await client.query(`ALTER TABLE photos ALTER COLUMN storage_key DROP NOT NULL;`).catch(() => {});
+    await client.query(`ALTER TABLE photos ALTER COLUMN storage_bucket DROP NOT NULL;`).catch(() => {});
 
     // Clinic locations table — one row per practice/location
     await client.query(`
@@ -218,6 +233,43 @@ const setupDatabase = async () => {
         docusign_envelope_id VARCHAR(100)
       );
     `);
+
+    // User sessions table — tracks every issued JWT for revocation support (Issue 2)
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS user_sessions (
+        jti           VARCHAR(36)  PRIMARY KEY,
+        user_id       VARCHAR(100) NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        issued_at     TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        expires_at    TIMESTAMP    NOT NULL,
+        revoked_at    TIMESTAMP,
+        revoked_by    VARCHAR(36)
+      );
+    `);
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_user_sessions_user_id ON user_sessions(user_id);`);
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_user_sessions_expires_at ON user_sessions(expires_at);`);
+
+    // Password reset tokens — SHA-256 hashed, single-use (Issue 4)
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS password_reset_tokens (
+        token_hash VARCHAR(255) PRIMARY KEY,
+        user_id    VARCHAR(100) NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        expires_at TIMESTAMP    NOT NULL,
+        used_at    TIMESTAMP
+      );
+    `);
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_prt_user_id ON password_reset_tokens(user_id);`);
+
+    // Clinic settings — key/value store (moved from runtime DDL — Issue 26)
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS clinic_settings (
+        key   VARCHAR(120) PRIMARY KEY,
+        value TEXT NOT NULL
+      );
+    `);
+
+    // MFA columns on users (Issue 1)
+    await client.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS mfa_secret VARCHAR(64);`);
+    await client.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS mfa_enabled BOOLEAN NOT NULL DEFAULT FALSE;`).catch(() => {});
 
     // Create indexes for performance
     await client.query(`

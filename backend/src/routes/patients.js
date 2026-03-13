@@ -2,6 +2,7 @@ import express from 'express';
 import { body, validationResult } from 'express-validator';
 import pool from '../db/pool.js';
 import { authenticateToken } from '../middleware/auth.js';
+import { logAudit } from '../middleware/auditLog.js';
 
 const router = express.Router();
 
@@ -130,6 +131,12 @@ router.get('/', async (req, res) => {
       p.visits = visitsByPatient[p.patient_id] || [];
     });
 
+    await logAudit({
+      userId: req.user.id, userName: req.user.name, userRole: req.user.role,
+      action: 'VIEW_PATIENTS', resourceType: 'patient', resourceId: null,
+      details: search ? `search=${search}` : null,
+      ip: req.ip,
+    });
     res.json(patients);
   } catch (error) {
     console.error('Error fetching patients:', error);
@@ -203,6 +210,11 @@ router.get('/:patientId', async (req, res) => {
       return v;
     });
     
+    await logAudit({
+      userId: req.user.id, userName: req.user.name, userRole: req.user.role,
+      action: 'VIEW_PATIENT', resourceType: 'patient', resourceId: patientId,
+      ip: req.ip,
+    });
     res.json(patient);
   } catch (error) {
     console.error('Error fetching patient:', error);
@@ -232,6 +244,12 @@ router.post('/', createPatientRules, async (req, res) => {
       ]
     );
     
+    await logAudit({
+      userId: req.user.id, userName: req.user.name, userRole: req.user.role,
+      action: 'CREATE_PATIENT', resourceType: 'patient',
+      resourceId: result.rows[0].patient_id,
+      ip: req.ip,
+    });
     res.status(201).json(result.rows[0]);
   } catch (error) {
     console.error('Error creating patient:', error);
@@ -266,6 +284,11 @@ router.put('/:patientId', updatePatientRules, async (req, res) => {
       return res.status(404).json({ error: 'Patient not found' });
     }
     
+    await logAudit({
+      userId: req.user.id, userName: req.user.name, userRole: req.user.role,
+      action: 'UPDATE_PATIENT', resourceType: 'patient', resourceId: patientId,
+      ip: req.ip,
+    });
     res.json(result.rows[0]);
   } catch (error) {
     console.error('Error updating patient:', error);
@@ -290,6 +313,11 @@ router.delete('/:patientId', async (req, res) => {
       return res.status(404).json({ error: 'Patient not found' });
     }
     
+    await logAudit({
+      userId: req.user.id, userName: req.user.name, userRole: req.user.role,
+      action: 'DELETE_PATIENT', resourceType: 'patient', resourceId: patientId,
+      ip: req.ip,
+    });
     res.json({ message: 'Patient deleted', patient_id: patientId });
   } catch (error) {
     console.error('Error deleting patient:', error);

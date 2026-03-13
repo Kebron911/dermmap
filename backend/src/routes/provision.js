@@ -20,7 +20,7 @@
 
 import express from 'express';
 import bcrypt from 'bcryptjs';
-import { randomUUID } from 'crypto';
+import { randomUUID, createHmac, timingSafeEqual } from 'crypto';
 import { body, validationResult } from 'express-validator';
 import rateLimit from 'express-rate-limit';
 import pool from '../db/pool.js';
@@ -190,6 +190,32 @@ router.post('/clinic', provisionLimiter, provisionRules, async (req, res) => {
 // Set DOCUSIGN_CONNECT_SECRET in env and verify before processing.
 // ---------------------------------------------------------------------------
 router.post('/docusign-webhook', webhookLimiter, async (req, res) => {
+  // Verify HMAC-SHA256 signature from DocuSign Connect (HIPAA / Issue 6)
+  const secret = process.env.DOCUSIGN_CONNECT_SECRET;
+  if (!secret) {
+    // Webhook is not configured — refuse rather than process unauthenticated activations
+    return res.status(503).json({ error: 'Webhook not configured' });
+  }
+
+  const sigHeader = req.headers['x-docusign-signature-1'];
+  if (!sigHeader) {
+    return res.status(401).json({ error: 'Missing signature' });
+  }
+
+  // Compute expected HMAC over the exact raw bytes received
+  const rawBody = req.rawBody ?? Buffer.alloc(0);
+  const expected = createHmac('sha256', secret).update(rawBody).digest('base64');
+  let sigBuf, expectedBuf;
+  try {
+    sigBuf = Buffer.from(sigHeader, 'base64');
+    expectedBuf = Buffer.from(expected, 'base64');
+  } catch {
+    return res.status(401).json({ error: 'Invalid signature' });
+  }
+  if (sigBuf.length !== expectedBuf.length || !timingSafeEqual(sigBuf, expectedBuf)) {
+    return res.status(401).json({ error: 'Invalid signature' });
+  }
+
   // DocuSign sends XML or JSON depending on Connect config; we expect JSON here.
   const { status, envelopeId, customFields } = req.body ?? {};
 
